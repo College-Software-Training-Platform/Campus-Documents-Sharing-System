@@ -42,6 +42,40 @@ Campus-Documents-Sharing-System/
 1. **Node.js**: `v20.20.0` (推荐使用最新的 LTS 版本)。
 2. **MySQL**: `8.0` 版本 (MySQL Community Server)。
 
+---
+
+## 🏗️ 核心系统架构说明
+
+### 1. 前端架构 (Vue 3 单页面应用)
+前端采用 **Vite 构建**，以 **Vue 3 (Composition API)** 为核心。
+主要选型：
+- **UI 组件库**: Element Plus（提供表单、弹窗、布局等后台组件支持）。
+- **路由控制**: Vue Router 4（分为用户端、管理端及公共页面）。
+- **状态管理**: Pinia（轻量级、直观的全局状态维护）。
+- **网络请求**: Axios（具有统一的鉴权 Token 拦截机制）。
+
+**🔗 路由规划概览：**
+*   公共路由：`/login`, `/register`
+*   用户端：`/home` (首页), `/discover/tags`, `/discover/trending`, `/search`, `/resource/:id`, `/publish`, `/profile/`
+*   管理端：`/admin` (首页看板), `/admin/users` (用户管理), `/admin/resources` (资源审核), `/admin/settings` (系统配置)
+
+### 2. 后端架构 (Node.js 服务端)
+采用 **Express** 框架提供稳定 RESTful API 服务。
+主要机制：
+- **ORM 数据操作**: Sequelize (封装所有 MySQL 的查询与关联)。
+- **身份认证机制**: JWT + bcrypt (保障接口调用与密码校验安全)。
+- **文件上传服务**: Multer (处理用户发布的附件资料并存储在服务器/云端)。
+
+### 3. 数据表核心设计 (MySQL ER 图实现)
+根据系统设计的 ER 图，数据库划分了以下核心表结构：
+*   **users (`用户表`)**：管理普通用户及 admin 账号、处理积分流向。
+*   **courses (`课程表`)**：存储课程类别及对应的学院归属。
+*   **resources (`资料表`)**：资源核心表，附带上传者、文件格式、消耗积分及审核状态字段。
+*   **tags & resource_tag_map (`标签及关联表`)**：实现复合维度的“发现-标签”搜索能力。
+*   其余如 **download_records (`下载记录表`)**、**points_logs (`积分日志`)** 保障积分经济体系流转，**feedbacks, system_logs (`日志处理等保障表格`)**。
+
+---
+
 ## 🚀 快速启动指南
 
 ### 1. 数据库初始化
