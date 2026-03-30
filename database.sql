@@ -3,99 +3,99 @@ USE campus_sharing_system;
 
 -- 用户表 (USER)
 CREATE TABLE IF NOT EXISTS `users` (
-  `User_ID` INT AUTO_INCREMENT PRIMARY KEY,
-  `Account` VARCHAR(50) NOT NULL UNIQUE,
-  `Password` VARCHAR(255) NOT NULL,
-  `Name` VARCHAR(100) NOT NULL,
-  `Role` ENUM('admin', 'user') DEFAULT 'user',
-  `Points_Balance` INT DEFAULT 0,
-  `Contact` VARCHAR(100),
-  `Account_Status` ENUM('active', 'banned') DEFAULT 'active',
-  `Register_Time` DATETIME DEFAULT CURRENT_TIMESTAMP
+  `user_ID` INT AUTO_INCREMENT PRIMARY KEY,
+  `account` VARCHAR(50) NOT NULL UNIQUE,
+  `password` VARCHAR(255) NOT NULL,
+  `name` VARCHAR(100) NOT NULL,
+  `role` ENUM('admin', 'user') DEFAULT 'user',
+  `points_Balance` INT DEFAULT 0,
+  `contact` VARCHAR(100),
+  `account_Status` ENUM('active', 'banned') DEFAULT 'active',
+  `register_Time` DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
 -- 课程表 (COURSE)
 CREATE TABLE IF NOT EXISTS `courses` (
-  `Course_ID` INT AUTO_INCREMENT PRIMARY KEY,
-  `Course_Name` VARCHAR(200) NOT NULL,
-  `College` VARCHAR(100) NOT NULL
+  `course_ID` INT AUTO_INCREMENT PRIMARY KEY,
+  `course_Name` VARCHAR(200) NOT NULL,
+  `college` VARCHAR(100) NOT NULL
 );
 
 -- 标签表 (TAG)
 CREATE TABLE IF NOT EXISTS `tags` (
-  `Tag_ID` INT AUTO_INCREMENT PRIMARY KEY,
-  `Tag_Name` VARCHAR(100) NOT NULL UNIQUE
+  `tag_ID` INT AUTO_INCREMENT PRIMARY KEY,
+  `tag_Name` VARCHAR(100) NOT NULL UNIQUE
 );
 
 -- 资料表 (RESOURCE)
 CREATE TABLE IF NOT EXISTS `resources` (
-  `Resource_ID` INT AUTO_INCREMENT PRIMARY KEY,
-  `Title` VARCHAR(200) NOT NULL,
-  `Uploader_ID` INT NOT NULL,
-  `Course_ID` INT,
-  `File_Path` VARCHAR(255) NOT NULL,
-  `Format` VARCHAR(50),
-  `File_Size` INT,
-  `Extracted_Text` TEXT,
-  `AI_Summary` TEXT,
-  `Required_Points` INT DEFAULT 0,
-  `Audit_Status` ENUM('pending', 'approved', 'rejected') DEFAULT 'pending',
-  `Upload_Time` DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (`Uploader_ID`) REFERENCES `users`(`User_ID`),
-  FOREIGN KEY (`Course_ID`) REFERENCES `courses`(`Course_ID`)
+  `resource_ID` INT AUTO_INCREMENT PRIMARY KEY,
+  `title` VARCHAR(200) NOT NULL,
+  `uploader_ID` INT NOT NULL,
+  `course_ID` INT,
+  `file_Path` VARCHAR(255) NOT NULL,
+  `format` VARCHAR(50),
+  `file_Size` INT,
+  `extracted_Text` TEXT,
+  `ai_Summary` TEXT,
+  `required_Points` INT DEFAULT 0,
+  `audit_Status` ENUM('pending', 'approved', 'rejected') DEFAULT 'pending',
+  `upload_Time` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (`uploader_ID`) REFERENCES `users`(`user_ID`),
+  FOREIGN KEY (`course_ID`) REFERENCES `courses`(`course_ID`)
 );
 
 -- 资料标签关联表 (RESOURCE_TAG_MAP)
 CREATE TABLE IF NOT EXISTS `resource_tag_map` (
-  `Resource_ID` INT NOT NULL,
-  `Tag_ID` INT NOT NULL,
-  PRIMARY KEY (`Resource_ID`, `Tag_ID`),
-  FOREIGN KEY (`Resource_ID`) REFERENCES `resources`(`Resource_ID`) ON DELETE CASCADE,
-  FOREIGN KEY (`Tag_ID`) REFERENCES `tags`(`Tag_ID`) ON DELETE CASCADE
+  `resource_ID` INT NOT NULL,
+  `tag_ID` INT NOT NULL,
+  PRIMARY KEY (`resource_ID`, `tag_ID`),
+  FOREIGN KEY (`resource_ID`) REFERENCES `resources`(`resource_ID`) ON DELETE CASCADE,
+  FOREIGN KEY (`tag_ID`) REFERENCES `tags`(`tag_ID`) ON DELETE CASCADE
 );
 
 -- 积分日志表 (POINTS_LOG)
 CREATE TABLE IF NOT EXISTS `points_logs` (
-  `Log_ID` INT AUTO_INCREMENT PRIMARY KEY,
-  `User_ID` INT NOT NULL,
-  `Amount` INT NOT NULL,
-  `Reason` VARCHAR(255),
-  `Ref_ID` INT, -- 可以是关联的资源ID等
-  `Create_Time` DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (`User_ID`) REFERENCES `users`(`User_ID`)
+  `log_ID` INT AUTO_INCREMENT PRIMARY KEY,
+  `user_ID` INT NOT NULL,
+  `amount` INT NOT NULL,
+  `reason` VARCHAR(255),
+  `ref_ID` INT, -- 可以是关联的资源ID等
+  `create_Time` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (`user_ID`) REFERENCES `users`(`user_ID`)
 );
 
 -- 反馈表 (FEEDBACK)
 CREATE TABLE IF NOT EXISTS `feedbacks` (
-  `Feedback_ID` INT AUTO_INCREMENT PRIMARY KEY,
-  `User_ID` INT NOT NULL,
-  `Content` TEXT NOT NULL,
-  `Status` ENUM('pending', 'processed') DEFAULT 'pending',
-  `Admin_ID` INT,
-  `Reply_Content` TEXT,
-  `Submit_Time` DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (`User_ID`) REFERENCES `users`(`User_ID`),
-  FOREIGN KEY (`Admin_ID`) REFERENCES `users`(`User_ID`)
+  `feedback_ID` INT AUTO_INCREMENT PRIMARY KEY,
+  `user_ID` INT NOT NULL,
+  `content` TEXT NOT NULL,
+  `status` ENUM('pending', 'processed') DEFAULT 'pending',
+  `admin_ID` INT,
+  `reply_Content` TEXT,
+  `submit_Time` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (`user_ID`) REFERENCES `users`(`user_ID`),
+  FOREIGN KEY (`admin_ID`) REFERENCES `users`(`user_ID`)
 );
 
 -- 系统日志表 (SYSTEM_LOG)
 CREATE TABLE IF NOT EXISTS `system_logs` (
-  `SysLog_ID` INT AUTO_INCREMENT PRIMARY KEY,
-  `Operator_ID` INT NOT NULL,
-  `Action_Type` VARCHAR(100) NOT NULL,
-  `Details` TEXT,
-  `Action_Time` DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (`Operator_ID`) REFERENCES `users`(`User_ID`)
+  `sysLog_ID` INT AUTO_INCREMENT PRIMARY KEY,
+  `operator_ID` INT NOT NULL,
+  `action_Type` VARCHAR(100) NOT NULL,
+  `details` TEXT,
+  `action_Time` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (`operator_ID`) REFERENCES `users`(`user_ID`)
 );
 
 -- 下载记录表 (DOWNLOAD_RECORD)
 CREATE TABLE IF NOT EXISTS `download_records` (
-  `Download_ID` INT AUTO_INCREMENT PRIMARY KEY,
-  `User_ID` INT NOT NULL,
-  `Resource_ID` INT NOT NULL,
-  `Deducted_Points` INT DEFAULT 0,
-  `Download_Time` DATETIME DEFAULT CURRENT_TIMESTAMP,
-  `IP_Address` VARCHAR(50),
-  FOREIGN KEY (`User_ID`) REFERENCES `users`(`User_ID`),
-  FOREIGN KEY (`Resource_ID`) REFERENCES `resources`(`Resource_ID`)
+  `download_ID` INT AUTO_INCREMENT PRIMARY KEY,
+  `user_ID` INT NOT NULL,
+  `resource_ID` INT NOT NULL,
+  `deducted_Points` INT DEFAULT 0,
+  `download_Time` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  `ip_Address` VARCHAR(50),
+  FOREIGN KEY (`user_ID`) REFERENCES `users`(`user_ID`),
+  FOREIGN KEY (`resource_ID`) REFERENCES `resources`(`resource_ID`)
 );
