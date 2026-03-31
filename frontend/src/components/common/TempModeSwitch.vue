@@ -25,7 +25,7 @@ const isUserSide = computed(() => {
 const toggleMode = () => {
   if (isUserSide.value) {
     // 如果在用户端，跳转到管理端首页
-    router.push('/admin/AdminLayout')
+    router.push('/admin')
   } else {
     // 如果在管理端，跳转回用户端首页
     router.push('/')
