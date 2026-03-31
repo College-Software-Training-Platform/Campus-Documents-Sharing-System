@@ -84,9 +84,7 @@ const loadMore = () => {
 <style scoped>
 /* 页面主体风格 */
 .user-home {
-  font-family: Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
   background: #f5f7fa;
-  color: #333;
   min-height: 100vh;
   padding-bottom: 20px;
 }

@@ -14,12 +14,12 @@ import UserHeader from '@/components/layout/UserHeader.vue'
 </script>
 
 <style scoped>
-.user-layout {
+/* .user-layout {
   min-height: 100vh;
   background-color: #f5f7fa;
   display: flex;
   flex-direction: column;
-}
+} */
 
 .content-wrapper {
   flex: 1;

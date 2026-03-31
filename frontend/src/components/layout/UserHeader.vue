@@ -1,10 +1,10 @@
 <template>
   <div class="header">
     <div class="nav-left">
-      <div class="logo">智慧校园</div>
+      <div class="logo" @click="router.push('/')" style="cursor: pointer;">智慧校园</div>
       <div class="nav">
-        <a href="#">首页</a>
-        <a href="#">发现</a>
+        <router-link to="/">首页</router-link>
+        <router-link to="/user/DiscoverTrend">发现</router-link>
       </div>
     </div>
     <!-- 使用 Element Plus input 替换原生 -->
@@ -12,19 +12,31 @@
       v-model="searchQuery"
       class="search-wrapper"
       placeholder="搜索学术资源..." 
+      @keyup.enter="onSearch"
     />
     <div class="nav-right">
       <div class="badge">100</div>
       <div style="cursor: pointer; font-size: 18px;">🔔</div>
-      <div class="avatar"></div>
+      <div class="avatar" @click="router.push('/user/Profile')" style="cursor: pointer;"></div>
     </div>
   </div>
 </template>
 
 <script setup>
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 
+const router = useRouter()
 const searchQuery = ref('')
+
+const onSearch = () => {
+  if (searchQuery.value.trim()) {
+    router.push({
+      path: '/user/SearchResult',
+      query: { q: searchQuery.value.trim() }
+    })
+  }
+}
 </script>
 
 <style scoped>
