@@ -5,24 +5,27 @@
       <span class="logo-text">智慧校园资料共享</span>
     </div>
 
-    <nav class="nav-menu">
-      <div class="nav-item active">
-        <img src="@/assets/icon/dashboard_active.svg" alt="首页" width="18" height="18">
-        <span>首页</span>
-      </div>
-      <div class="nav-item">
-        <img src="@/assets/icon/list.svg" alt="资源审核" width="18" height="18">
-        <span>资源审核</span>
-      </div>
-      <div class="nav-item">
-        <img src="@/assets/icon/user.svg" alt="用户管理" width="18" height="18">
-        <span>用户管理</span>
-      </div>
-      <div class="nav-item">
-        <img src="@/assets/icon/settings.svg" alt="系统设置" width="18" height="18">
-        <span>系统设置</span>
-      </div>
-    </nav>
+ <nav class="nav-menu">
+  <router-link to="/admin" class="nav-item" active-class="active">
+    <img src="@/assets/icon/dashboard_active.svg" alt="首页" width="18" height="18">
+    <span>首页</span>
+  </router-link>
+
+  <router-link to="/admin/ResourceAudit" class="nav-item" active-class="active">
+    <img src="@/assets/icon/list.svg" alt="资源审核" width="18" height="18">
+    <span>资源审核</span>
+  </router-link>
+
+  <router-link to="/admin/UserManage" class="nav-item" active-class="active">
+    <img src="@/assets/icon/user.svg" alt="用户管理" width="18" height="18">
+    <span>用户管理</span>
+  </router-link>
+
+  <router-link to="/admin/SystemSettings" class="nav-item" active-class="active">
+    <img src="@/assets/icon/settings.svg" alt="系统设置" width="18" height="18">
+    <span>系统设置</span>
+  </router-link>
+</nav>
 
     <div class="user-profile">
       <img src="@/assets/image/endmin.jpg" alt="Avatar" class="avatar">

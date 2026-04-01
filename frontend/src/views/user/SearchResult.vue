@@ -1,256 +1,229 @@
 <template>
-  <div class="search-result">
+  <div class="search-container">
+    <div class="search-header">
+      <div class="breadcrumb">
+        <el-breadcrumb separator="/">
+          <el-breadcrumb-item :to="{ path: '/' }">首页</el-breadcrumb-item>
+          <el-breadcrumb-item>搜索结果</el-breadcrumb-item>
+        </el-breadcrumb>
+      </div>
+      <h2 class="search-title">
+        "{{ searchKeyword }}" 的搜索结果 
+        <span class="count">共找到 {{ total }} 条资源</span>
+      </h2>
+    </div>
 
-    <div class="page-wrap">
-      <section class="title-row">
-        <h1>组合搜索</h1>
-        <p>按关键词 + 课程 + 标签 + 文件格式 + 排序，精准定位资料</p>
-      </section>
+    <div class="filter-bar">
+      <div class="filter-group">
+        <span class="label">资源分类:</span>
+        <el-radio-group v-model="filter.category" size="small">
+          <el-radio-button label="all">全部</el-radio-button>
+          <el-radio-button label="course">课程资料</el-radio-button>
+          <el-radio-button label="exam">历年真题</el-radio-button>
+          <el-radio-button label="notes">学霸笔记</el-radio-button>
+        </el-radio-group>
+      </div>
+      <div class="filter-group">
+        <span class="label">排序方式:</span>
+        <el-select v-model="filter.sort" size="small" style="width: 120px">
+          <el-option label="综合排序" value="default" />
+          <el-option label="最新发布" value="newest" />
+          <el-option label="最多下载" value="hottest" />
+          <el-option label="积分最低" value="cheapest" />
+        </el-select>
+      </div>
+    </div>
 
-      <section class="filter-panel">
-        <div class="row">
-          <label>关键词</label>
-          <input v-model.trim="keyword" placeholder="输入标题关键词，如：高数、真题、实验" @keyup.enter="applySearch" />
-        </div>
-
-        <div class="row double">
-          <div>
-            <label>课程</label>
-            <select v-model.number="courseId">
-              <option :value="0">全部课程</option>
-              <option v-for="course in courseList" :key="course.courseId" :value="course.courseId">
-                {{ course.courseName }}
-              </option>
-            </select>
-          </div>
-
-          <div>
-            <label>标签</label>
-            <select v-model.number="tagId">
-              <option :value="0">全部标签</option>
-              <option v-for="tag in tagList" :key="tag.tagId" :value="tag.tagId">
-                {{ tag.tagName }}
-              </option>
-            </select>
-          </div>
-        </div>
-
-        <div class="row triple">
-          <div>
-            <label>文件格式</label>
-            <select v-model="format">
-              <option value="all">全部</option>
-              <option value="pdf">PDF</option>
-              <option value="docx">DOCX</option>
-              <option value="zip">ZIP</option>
-            </select>
-          </div>
-
-          <div>
-            <label>排序方式</label>
-            <select v-model="sortBy">
-              <option value="uploadTime">按上传时间</option>
-              <option value="requiredPoints">按积分价格</option>
-            </select>
-          </div>
-
-          <div>
-            <label>排序方向</label>
-            <select v-model="sortOrder">
-              <option value="desc">降序</option>
-              <option value="asc">升序</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="actions">
-          <button class="btn ghost" @click="resetFilters">重置筛选</button>
-          <button class="btn primary" @click="applySearch">应用筛选</button>
-        </div>
-      </section>
-
-      <section class="result-head">
-        <h2>搜索结果</h2>
-        <span>{{ finalList.length }} 条结果</span>
-      </section>
-
-      <section class="result-list">
-        <article v-for="item in finalList" :key="item.resourceId" class="result-card">
-          <div class="main">
-            <h3>{{ item.title }}</h3>
-            <p class="summary">{{ item.aiSummary }}</p>
-            <div class="meta">
-              <span>{{ item.courseName }}</span>
-              <span>{{ item.tagName }}</span>
-              <span>{{ item.format.toUpperCase() }}</span>
-              <span>{{ item.uploadTime }}</span>
+    <div class="results-list">
+      <el-skeleton :loading="loading" animated :count="3">
+        <template #template>
+          <div style="padding: 20px; display: flex; gap: 20px; background: #fff; margin-bottom: 12px; border-radius: 8px;">
+            <el-skeleton-item variant="image" style="width: 50px; height: 50px" />
+            <div style="flex: 1">
+              <el-skeleton-item variant="h3" style="width: 40%" />
+              <el-skeleton-item variant="text" style="margin-top: 15px; width: 80%" />
+              <el-skeleton-item variant="text" style="margin-top: 10px; width: 50%" />
             </div>
           </div>
-          <div class="side">
-            <strong>{{ item.requiredPoints }} 积分</strong>
-            <button @click="goDetail(item.resourceId)">查看详情</button>
+        </template>
+        
+        <template #default>
+          <div v-if="results.length > 0">
+            <div v-for="item in results" :key="item.id" class="resource-card">
+              <div class="res-icon">
+                <img :src="getFileIcon(item.type)" alt="file" />
+              </div>
+              <div class="res-info">
+                <h3 @click="goDetail(item.id)" v-html="highlight(item.title)"></h3>
+                <p class="res-desc">{{ item.description }}</p>
+                <div class="res-meta">
+                  <span><el-icon><User /></el-icon> {{ item.author }}</span>
+                  <span><el-icon><Calendar /></el-icon> {{ item.date }}</span>
+                  <span class="tag">{{ item.category }}</span>
+                </div>
+              </div>
+              <div class="res-action">
+                <div class="price" :class="{ 'free': item.points === 0 }">
+                  {{ item.points > 0 ? item.points + ' 积分' : '免费' }}
+                </div>
+                <el-button type="primary" plain size="small" @click="goDetail(item.id)">查看详情</el-button>
+              </div>
+            </div>
           </div>
-        </article>
 
-        <div v-if="finalList.length === 0" class="empty-state">
-          没有找到匹配资源，请尝试放宽筛选条件。
-        </div>
-      </section>
+          <el-empty v-else description="没有找到相关资源，换个关键词试试？" />
+        </template>
+      </el-skeleton>
+    </div>
+
+    <div class="pagination" v-if="total > 0">
+      <el-pagination
+        v-model:current-page="currentPage"
+        background
+        layout="prev, pager, next"
+        :total="total"
+        :page-size="10"
+        @current-change="handlePageChange"
+      />
     </div>
   </div>
 </template>
 
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { ref, reactive, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { User, Calendar } from '@element-plus/icons-vue'
 
 const route = useRoute()
 const router = useRouter()
 
-const courseList = ref([
-  { courseId: 1, courseName: '数据结构' },
-  { courseId: 2, courseName: '操作系统' },
-  { courseId: 3, courseName: '高等数学' },
-  { courseId: 4, courseName: '计算机网络' }
-])
+// --- 状态变量 ---
+const searchKeyword = ref(route.query.q || '')
+const loading = ref(true)
+const total = ref(0)
+const currentPage = ref(1)
+const results = ref([])
 
-const tagList = ref([
-  { tagId: 1, tagName: '期末复习' },
-  { tagId: 2, tagName: '历年真题' },
-  { tagId: 3, tagName: '课程设计' },
-  { tagId: 4, tagName: '实验报告' }
-])
-
-const dataList = ref([
-  { resourceId: 101, title: '数据结构期末速记', aiSummary: '覆盖链表、树、图核心考点，适合考前冲刺。', courseId: 1, courseName: '数据结构', tagId: 1, tagName: '期末复习', format: 'pdf', requiredPoints: 10, uploadTime: '2026-03-29' },
-  { resourceId: 102, title: '高等数学近十年真题', aiSummary: '收录多校联考真题，按题型分类并附答案。', courseId: 3, courseName: '高等数学', tagId: 2, tagName: '历年真题', format: 'zip', requiredPoints: 18, uploadTime: '2026-03-25' },
-  { resourceId: 103, title: '操作系统课程设计报告模板', aiSummary: '含进程调度、内存管理实验模板和评分点。', courseId: 2, courseName: '操作系统', tagId: 3, tagName: '课程设计', format: 'docx', requiredPoints: 8, uploadTime: '2026-03-28' },
-  { resourceId: 104, title: '计算机网络实验报告合集', aiSummary: '网络抓包、路由配置、HTTP实验报告范例。', courseId: 4, courseName: '计算机网络', tagId: 4, tagName: '实验报告', format: 'pdf', requiredPoints: 12, uploadTime: '2026-03-20' },
-  { resourceId: 105, title: '高数期末复习讲义', aiSummary: '极限、微分、积分题型拆解，附易错点。', courseId: 3, courseName: '高等数学', tagId: 1, tagName: '期末复习', format: 'pdf', requiredPoints: 9, uploadTime: '2026-03-31' }
-])
-
-const keyword = ref(String(route.query.q || ''))
-const courseId = ref(Number(route.query.courseId || 0))
-const tagId = ref(Number(route.query.tagId || 0))
-const format = ref(String(route.query.format || 'all'))
-const sortBy = ref(String(route.query.sortBy || 'uploadTime'))
-const sortOrder = ref(String(route.query.sortOrder || 'desc'))
-
-watch(
-  () => route.query,
-  (query) => {
-    keyword.value = String(query.q || '')
-    courseId.value = Number(query.courseId || 0)
-    tagId.value = Number(query.tagId || 0)
-    format.value = String(query.format || 'all')
-    sortBy.value = String(query.sortBy || 'uploadTime')
-    sortOrder.value = String(query.sortOrder || 'desc')
-  }
-)
-
-const filteredList = computed(() => {
-  return dataList.value.filter((item) => {
-    const normalizedKeyword = keyword.value.trim().toLowerCase()
-    const keywordMatch = normalizedKeyword
-      ? item.title.toLowerCase().includes(normalizedKeyword) || item.aiSummary.toLowerCase().includes(normalizedKeyword)
-      : true
-
-    const courseMatch = courseId.value ? item.courseId === courseId.value : true
-    const tagMatch = tagId.value ? item.tagId === tagId.value : true
-    const formatMatch = format.value === 'all' ? true : item.format === format.value
-
-    return keywordMatch && courseMatch && tagMatch && formatMatch
-  })
+// 筛选条件
+const filter = reactive({
+  category: 'all',
+  sort: 'default'
 })
 
-const finalList = computed(() => {
-  const list = [...filteredList.value]
-  list.sort((a, b) => {
-    const va = sortBy.value === 'uploadTime' ? new Date(a.uploadTime).getTime() : a.requiredPoints
-    const vb = sortBy.value === 'uploadTime' ? new Date(b.uploadTime).getTime() : b.requiredPoints
+// --- 核心逻辑 ---
 
-    return sortOrder.value === 'desc' ? vb - va : va - vb
-  })
+// 模拟 API 请求
+const fetchResults = () => {
+  loading.value = true
+  // 实际开发请使用 axios.get('/api/search', { params: { q: searchKeyword.value, ...filter, page: currentPage.value } })
+  setTimeout(() => {
+    // 模拟数据生成
+    results.value = [
+      { id: 1, title: '计算机网络期末复习题库', description: '包含最新真题及详细解答，适合期末冲刺和考研复习。', author: '重邮学长', date: '2026-03-20', category: '历年真题', points: 5, type: 'pdf' },
+      { id: 2, title: 'C++ STL 标准库思维导图', description: '一图看懂 STL 六大组件关系，助力蓝桥杯等算法竞赛。', author: '编程小能手', date: '2026-03-25', category: '学霸笔记', points: 0, type: 'img' }
+    ]
+    total.value = 2 // 假设总数
+    loading.value = false
+  }, 600)
+}
 
-  return list
+// 关键词高亮 (简单实现)
+const highlight = (text) => {
+  if (!searchKeyword.value) return text
+  const reg = new RegExp(`(${searchKeyword.value})`, 'gi')
+  return text.replace(reg, '<span class="hl">$1</span>')
+}
+
+const getFileIcon = (type) => {
+  // 生产环境建议准备一套图标映射表
+  return '/icons/default_file.png' 
+}
+
+const handlePageChange = (val) => {
+  currentPage.value = val
+  fetchResults()
+}
+
+const goDetail = (id) => {
+  router.push(`/document/${id}`)
+}
+
+// --- 监听器 ---
+
+// 1. 监听 URL 搜索词变化 (当用户在顶部搜索框再次搜索时)
+watch(() => route.query.q, (newVal) => {
+  searchKeyword.value = newVal || ''
+  currentPage.value = 1
+  fetchResults()
 })
 
-const applySearch = () => {
-  router.push({
-    path: '/user/SearchResult',
-    query: {
-      q: keyword.value || '',
-      courseId: courseId.value || '',
-      tagId: tagId.value || '',
-      format: format.value === 'all' ? '' : format.value,
-      sortBy: sortBy.value,
-      sortOrder: sortOrder.value
-    }
-  })
-}
+// 2. 监听筛选条件变化自动刷新
+watch([() => filter.category, () => filter.sort], () => {
+  currentPage.value = 1
+  fetchResults()
+})
 
-const resetFilters = () => {
-  keyword.value = ''
-  courseId.value = 0
-  tagId.value = 0
-  format.value = 'all'
-  sortBy.value = 'uploadTime'
-  sortOrder.value = 'desc'
-
-  router.push({ path: '/user/SearchResult', query: {} })
-}
-
-const goDetail = (resourceId) => {
-  router.push({ path: '/user/DocumentDetail', query: { resourceId } })
-}
+onMounted(() => {
+  fetchResults()
+})
 </script>
 
 <style scoped>
-.search-result { min-height: 100vh; background: #f6f8fc; }
-.page-wrap { width: 90%; max-width: 1180px; margin: 0 auto; padding: 28px 0 44px; }
-.title-row { margin-bottom: 16px; }
-.title-row h1 { margin: 0 0 8px; color: #1f2a44; }
-.title-row p { margin: 0; color: #6c7a96; }
-
-.filter-panel { background: #fff; border-radius: 14px; padding: 16px; box-shadow: 0 4px 14px rgba(15, 33, 67, 0.06); margin-bottom: 14px; }
-.row { margin-bottom: 12px; }
-.row label { display: block; font-size: 13px; color: #7683a0; margin-bottom: 6px; }
-.row input,
-.row select { width: 100%; border: 1px solid #d7def0; border-radius: 8px; padding: 9px 10px; outline: none; }
-.row input:focus,
-.row select:focus { border-color: #3468f2; box-shadow: 0 0 0 2px rgba(52, 104, 242, 0.12); }
-
-.row.double,
-.row.triple { display: grid; gap: 10px; }
-.row.double { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.row.triple { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-
-.actions { display: flex; justify-content: flex-end; gap: 10px; }
-.btn { border: none; border-radius: 8px; padding: 8px 14px; cursor: pointer; }
-.btn.ghost { background: #eef3ff; color: #3a4f80; }
-.btn.primary { background: #3468f2; color: #fff; }
-
-.result-head { display: flex; justify-content: space-between; align-items: center; margin: 14px 0; }
-.result-head h2 { margin: 0; color: #1f2a44; }
-.result-head span { color: #8a97b2; }
-
-.result-list { display: grid; gap: 10px; }
-.result-card { display: flex; justify-content: space-between; gap: 12px; background: #fff; border: 1px solid #e9eefb; border-radius: 10px; padding: 12px; }
-.main h3 { margin: 0 0 6px; color: #1f2a44; }
-.summary { margin: 0 0 8px; color: #5f6e8b; font-size: 14px; }
-.meta { display: flex; gap: 8px; flex-wrap: wrap; }
-.meta span { background: #f2f6ff; color: #5a6c92; border-radius: 999px; padding: 3px 8px; font-size: 12px; }
-
-.side { display: flex; flex-direction: column; justify-content: space-between; align-items: flex-end; min-width: 120px; }
-.side strong { color: #3468f2; }
-.side button { border: none; background: #3468f2; color: #fff; border-radius: 8px; padding: 6px 10px; cursor: pointer; }
-
-.empty-state { text-align: center; color: #92a0b9; background: #fff; border-radius: 10px; padding: 28px; border: 1px dashed #ced7ef; }
-
-@media (max-width: 900px) {
-  .row.double,
-  .row.triple { grid-template-columns: 1fr; }
-  .result-card { flex-direction: column; }
-  .side { align-items: flex-start; gap: 8px; }
+.search-container {
+  max-width: 1000px;
+  margin: 20px auto;
+  padding: 0 20px;
+  min-height: 80vh;
 }
+.search-header { margin-bottom: 20px; }
+.search-title { font-size: 20px; color: #333; margin-top: 10px; }
+.search-title .count { font-size: 14px; color: #909399; font-weight: normal; margin-left: 10px; }
+
+.filter-bar {
+  background: #fff;
+  padding: 15px 20px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+.filter-group { display: flex; align-items: center; gap: 10px; }
+.filter-group .label { font-size: 13px; color: #606266; }
+
+.resource-card {
+  background: #fff;
+  margin-bottom: 12px;
+  padding: 20px;
+  border-radius: 8px;
+  display: flex;
+  gap: 20px;
+  transition: all 0.3s ease;
+  border: 1px solid transparent;
+}
+.resource-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 16px rgba(0,0,0,0.08);
+  border-color: #409eff33;
+}
+
+.res-icon img { width: 48px; height: 48px; object-fit: contain; }
+.res-info { flex: 1; }
+.res-info h3 { margin: 0 0 8px 0; color: #303133; cursor: pointer; font-size: 17px; }
+.res-info h3:hover { color: #409EFF; }
+
+/* 深度选择器处理高亮样式 */
+:deep(.hl) { color: #f56c6c; font-weight: bold; }
+
+.res-desc { font-size: 13px; color: #666; margin-bottom: 12px; line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.res-meta { font-size: 12px; color: #999; display: flex; gap: 20px; align-items: center; }
+.res-meta span { display: flex; align-items: center; gap: 4px; }
+.res-meta .tag { background: #f0f7ff; color: #409EFF; padding: 2px 8px; border-radius: 4px; }
+
+.res-action { text-align: right; min-width: 120px; border-left: 1px solid #f0f0f0; padding-left: 20px; display: flex; flex-direction: column; justify-content: center; }
+.price { font-size: 20px; color: #F56C6C; font-weight: bold; margin-bottom: 8px; }
+.price.free { color: #67C23A; }
+
+.pagination { margin-top: 30px; display: flex; justify-content: center; padding-bottom: 40px; }
 </style>
