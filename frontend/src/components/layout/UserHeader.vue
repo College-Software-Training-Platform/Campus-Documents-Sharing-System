@@ -1,17 +1,17 @@
 <template>
   <div class="header">
     <div class="nav-left">
-      <div class="logo" @click="router.push('/')" style="cursor: pointer;">智慧校园</div>
+      <div class="logo" @click="router.push('/')" style="cursor: pointer;">智慧校园资料共享</div>
       <div class="nav">
         <router-link to="/">首页</router-link>
-        <router-link to="/user/DiscoverTrend">发现</router-link>
+        <router-link to="/user/DiscoverTag">发现</router-link>
       </div>
     </div>
     <!-- 使用 Element Plus input 替换原生 -->
     <el-input 
       v-model="searchQuery"
       class="search-wrapper"
-      placeholder="搜索学术资源..." 
+      placeholder="搜索学术资源、论文、课件..." 
       @keyup.enter="onSearch"
     />
     <div class="nav-right">
