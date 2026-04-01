@@ -9,6 +9,23 @@
       </template>
 
       <el-form :model="editForm" label-width="100px" label-position="left">
+        <el-form-item label="用户头像">
+          <el-upload
+            class="avatar-uploader"
+            action="/api/user/upload-avatar" 
+            :show-file-list="false"
+            :on-success="handleAvatarSuccess"
+            :before-upload="beforeAvatarUpload"
+            name="avatar"
+          >
+            <img v-if="imageUrl" :src="imageUrl" class="avatar-preview" />
+            <el-icon v-else class="avatar-uploader-icon"><Plus /></el-icon>
+            <template #tip>
+              <div class="el-upload__tip">支持 JPG/PNG，不超过 2MB</div>
+            </template>
+          </el-upload>
+        </el-form-item>
+
         <el-form-item label="用户昵称">
           <el-input v-model="editForm.nickname" placeholder="请输入昵称" />
         </el-form-item>
@@ -43,23 +60,52 @@
 import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import { Plus } from '@element-plus/icons-vue' // 必须引入 Plus 图标
 
 const router = useRouter()
 const submitting = ref(false)
 
+// 预览图片路径
+const imageUrl = ref('https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png')
+
 const editForm = reactive({
   nickname: '重邮学生',
   bio: '计科专业 | 考研党',
-  major: 'CS'
+  major: 'CS',
+  avatarUrl: '' // 存储后端返回的地址
 })
+
+// 上传前校验
+const beforeAvatarUpload = (rawFile) => {
+  const isTypeValid = ['image/jpeg', 'image/png'].includes(rawFile.type)
+  const isLt2M = rawFile.size / 1024 / 1024 < 2
+
+  if (!isTypeValid) {
+    ElMessage.error('头像只能是 JPG 或 PNG 格式!')
+    return false
+  }
+  if (!isLt2M) {
+    ElMessage.error('头像大小不能超过 2MB!')
+    return false
+  }
+  return true
+}
+
+// 上传成功回调
+const handleAvatarSuccess = (response, uploadFile) => {
+  // 模拟：通常这里会拿 response.url
+  imageUrl.value = URL.createObjectURL(uploadFile.raw)
+  editForm.avatarUrl = response.url || '' 
+  ElMessage.success('头像上传成功')
+}
 
 const handleSave = () => {
   submitting.value = true
-  // 模拟 API 请求
+  // 这里你应该调用后端 API，例如 axios.post('/api/user/update', editForm)
   setTimeout(() => {
     submitting.value = false
-    ElMessage.success('资料保存成功')
-    router.push('/user/Profile') // 保存成功跳回个人中心
+    ElMessage.success('个人资料已更新')
+    router.push('/user/Profile')
   }, 800)
 }
 </script>
@@ -81,5 +127,36 @@ const handleSave = () => {
 .card-header .title {
   font-weight: bold;
   font-size: 18px;
+}
+
+/* 头像上传组件专属样式 */
+.avatar-uploader {
+  border: 1px dashed #d9d9d9;
+  border-radius: 50%; /* 圆形边框 */
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  width: 100px;
+  height: 100px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: border-color 0.3s;
+}
+
+.avatar-uploader:hover {
+  border-color: #409eff;
+}
+
+.avatar-uploader-icon {
+  font-size: 28px;
+  color: #8c939d;
+}
+
+.avatar-preview {
+  width: 100px;
+  height: 100px;
+  display: block;
+  object-fit: cover;
 }
 </style>
