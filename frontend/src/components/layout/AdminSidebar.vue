@@ -21,6 +21,11 @@
     <span>用户管理</span>
   </router-link>
 
+  <router-link to="/admin/FeedbackManage" class="nav-item" active-class="active">
+    <img src="@/assets/icon/user.svg" alt="用户反馈" width="18" height="18">
+    <span>用户反馈</span>
+  </router-link> 
+
   <router-link to="/admin/SystemSettings" class="nav-item" active-class="active">
     <img src="@/assets/icon/settings.svg" alt="系统设置" width="18" height="18">
     <span>系统设置</span>
