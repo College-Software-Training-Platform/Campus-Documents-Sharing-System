@@ -20,6 +20,7 @@ const generateSummary = async (req, res) => {
     
     if (aiResponse && aiResponse.choices && aiResponse.choices.length > 0) {
       const summary = aiResponse.choices[0].message.content;
+      
       return res.status(200).json({
         success: true,
         summary: summary.trim()
