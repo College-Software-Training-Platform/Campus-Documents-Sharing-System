@@ -12,12 +12,10 @@
           </div>
         </div>
         <div class="user-actions">
-          <el-button type="primary" size="default">修改资料</el-button>
+          <el-button type="primary" size="default" @click="goToEdit">修改资料</el-button>
         </div>
       </div>
     </el-card>
-
-    
 
     <el-tabs v-model="activeTab" class="profile-tabs" type="border-card">
       <el-tab-pane label="我的资料库" name="resources">
@@ -37,10 +35,13 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router' // 引入路由
 import MyResources from './components/MyResources.vue'
 import PointDetails from './components/PointDetails.vue'
 
+const router = useRouter() // 初始化路由
 const activeTab = ref('resources')
+
 const userInfo = ref({
   nickname: '重邮学生',
   bio: '计科专业 | 考研党',
@@ -48,8 +49,13 @@ const userInfo = ref({
   points: 150
 })
 
+// 跳转到修改资料页面的方法
+const goToEdit = () => {
+  router.push('/user/UserEdit')
+}
+
 onMounted(() => {
-  // 此处后续对接 API：request.get('/user/info')
+  // 后续对接 API：request.get('/user/info')
 })
 </script>
 
@@ -62,4 +68,5 @@ onMounted(() => {
 .user-bio { font-size: 14px; color: #909399; margin-bottom: 12px; }
 .stats-badge { display: flex; gap: 10px; }
 .profile-tabs { border-radius: 8px; min-height: 500px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+.placeholder { padding: 40px; text-align: center; color: #909399; }
 </style>
