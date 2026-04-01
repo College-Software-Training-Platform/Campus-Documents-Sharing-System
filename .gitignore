@@ -29,6 +29,9 @@ backend/node_modules/
 backend/.env
 backend/.env.*
 
+# -------- AI Context (local only, do not commit) --------
+AI_context/
+
 # -------- Frontend --------
 # Node modules
 frontend/node_modules/
