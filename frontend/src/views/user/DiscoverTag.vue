@@ -1,216 +1,360 @@
 <template>
-  <div class="discover-tag">
-    <UserHeader />
+  <div class="discover-tag-page">
+    <!-- 二级导航（趋势 / 标签） -->
+    <section class="sub-nav">
+      <button class="sub-tab" @click="goTrend">趋势</button>
+      <button class="sub-tab active">标签</button>
 
-    <div class="page-wrap">
-      <section class="hero">
-        <h1>课程分类导航</h1>
-        <p>按学院、课程、标签快速定位你要的资料</p>
-      </section>
+      <div class="view-switch">
+        <button class="switch-btn">▦</button>
+        <button class="switch-btn">☰</button>
+      </div>
+    </section>
 
-      <section class="block">
-        <div class="block-title">
-          <h2>🏫 学院筛选</h2>
-          <button class="text-btn" @click="resetFilters">重置筛选</button>
+    <!-- 知识图谱探索 -->
+    <section class="section-block">
+      <div class="section-head">
+        <div>
+          <h2>知识图谱探索</h2>
+          <p>按类别和课程代码浏览学术资源</p>
         </div>
-        <div class="college-tabs">
-          <button
-            v-for="college in collegeList"
-            :key="college"
-            :class="['chip', { active: selectedCollege === college }]"
-            @click="selectedCollege = college"
-          >
-            {{ college }}
-          </button>
-        </div>
-      </section>
+        <button class="view-all" @click="goSearch">查看完整图谱 →</button>
+      </div>
 
-      <section class="block">
-        <div class="block-title">
-          <h2>📚 课程列表</h2>
-          <span>{{ filteredCourses.length }} 门课程</span>
-        </div>
+      <div class="category-chips">
+        <button
+          v-for="item in categoryList"
+          :key="item"
+          :class="['chip', { active: activeCategory === item }]"
+          @click="activeCategory = item"
+        >
+          {{ item }}
+        </button>
+      </div>
 
-        <div class="course-grid">
-          <button
-            v-for="course in filteredCourses"
-            :key="course.courseId"
-            :class="['course-card', { active: selectedCourseId === course.courseId }]"
-            @click="selectedCourseId = course.courseId"
-          >
-            <h3>{{ course.courseName }}</h3>
-            <p>{{ course.college }}</p>
-          </button>
-        </div>
-      </section>
-
-      <section class="block">
-        <div class="block-title">
-          <h2>🏷️ 热门标签</h2>
-          <span>可多维浏览资源类型</span>
-        </div>
-
-        <div class="tag-list">
-          <button
-            v-for="tag in tagList"
-            :key="tag.tagId"
-            :class="['tag-pill', { active: selectedTagId === tag.tagId }]"
-            @click="selectedTagId = tag.tagId"
-          >
-            {{ tag.tagName }}
-          </button>
-          <button class="tag-pill clear" @click="selectedTagId = null">清空标签</button>
-        </div>
-      </section>
-
-      <section class="block">
-        <div class="block-title">
-          <h2>✨ 当前分类下推荐资源</h2>
-          <button class="jump-btn" @click="goSearch">去组合搜索</button>
-        </div>
-
-        <div class="resource-list" v-if="filteredResources.length">
-          <div v-for="item in filteredResources" :key="item.resourceId" class="resource-item">
-            <div>
-              <h4>{{ item.title }}</h4>
-              <p>
-                {{ item.courseName }} · {{ item.format.toUpperCase() }} · {{ item.uploadTime }}
-              </p>
-            </div>
-            <div class="right">
-              <span>{{ item.requiredPoints }} 积分</span>
-              <button @click="goDetail(item.resourceId)">查看详情</button>
-            </div>
+      <div class="course-grid">
+        <article
+          v-for="card in filteredCards"
+          :key="card.code"
+          class="course-card"
+          @click="goSearchByCategory(card.category)"
+        >
+          <div class="card-top">
+            <span class="icon-box">{{ card.icon }}</span>
+            <span class="meta">{{ card.count }} 资源</span>
           </div>
-        </div>
-        <div v-else class="empty-state">当前筛选条件下暂无资源，请切换学院/课程/标签试试</div>
-      </section>
-    </div>
+
+          <h3>{{ card.code }}</h3>
+          <p>{{ card.name }}</p>
+
+          <div class="tags">
+            <span v-for="tag in card.tags" :key="tag" class="tag">{{ tag }}</span>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <!-- 热门研究标签 -->
+    <section class="hot-tag-block">
+      <div class="hot-title">✨ 热门研究标签</div>
+      <div class="hot-tag-list">
+        <button
+          v-for="tag in hotTags"
+          :key="tag"
+          class="hot-tag-item"
+          @click="goSearchByKeyword(tag.replace('#', ''))"
+        >
+          <strong>{{ tag }}</strong>
+          <span>活跃节点</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- 右下角发布按钮 -->
+    <button class="publish-fab" @click="goPublish" title="发布资料">
+      +
+    </button>
   </div>
 </template>
 
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import UserHeader from '@/components/layout/UserHeader.vue'
 
 const router = useRouter()
 
-const collegeList = ['全部学院', '计算机学院', '数学学院', '自动化学院', '外国语学院']
-const selectedCollege = ref('全部学院')
-const selectedCourseId = ref(null)
-const selectedTagId = ref(null)
+const categoryList = ['所有系部', '计算机科学', '经济学', '工程学', '物理学', '数学', '生物学']
+const activeCategory = ref('所有系部')
 
-const courseList = ref([
-  { courseId: 1, courseName: '数据结构', college: '计算机学院' },
-  { courseId: 2, courseName: '操作系统', college: '计算机学院' },
-  { courseId: 3, courseName: '高等数学', college: '数学学院' },
-  { courseId: 4, courseName: '线性代数', college: '数学学院' },
-  { courseId: 5, courseName: '自动控制原理', college: '自动化学院' },
-  { courseId: 6, courseName: '学术英语', college: '外国语学院' }
-])
+const courseCards = [
+  { code: 'CS101', name: '算法与数据结构导论', category: '计算机科学', icon: '🖥️', count: 124, tags: ['Python', 'Big O', 'Sorting'] },
+  { code: 'ENG202', name: '经典文学批评方法', category: '工程学', icon: '📐', count: 124, tags: ['Entropy', 'Flow'] },
+  { code: 'MATH305', name: '线性代数与复变函数', category: '数学', icon: 'Σ', count: 124, tags: ['Matrices', 'Eigen'] },
+  { code: 'PHYS102', name: '电磁学与波动光学', category: '物理学', icon: '🧪', count: 124, tags: ['Maxwell', 'Optics'] },
+  { code: 'ECON101', name: '微观经济理论与政策', category: '经济学', icon: '💰', count: 124, tags: ['Supply', 'Market'] },
+  { code: 'AI Lab', name: '机器学习与神经网络研究', category: '计算机科学', icon: '🧠', count: 124, tags: ['Deep Learning', 'NLP'] },
+  { code: 'DM404', name: '交互界面设计与 UX 原则', category: '工程学', icon: '🎨', count: 124, tags: ['UI/UX', 'Design'] },
+  { code: 'BIO220', name: '细胞生物学与分子遗传学', category: '生物学', icon: '🧬', count: 124, tags: ['DNA', 'Protein'] }
+]
 
-const tagList = ref([
-  { tagId: 1, tagName: '期末复习' },
-  { tagId: 2, tagName: '历年真题' },
-  { tagId: 3, tagName: '课程设计' },
-  { tagId: 4, tagName: '实验报告' },
-  { tagId: 5, tagName: '保研经验' }
-])
+const hotTags = ['#NLP', '#Quantum', '#FinTech', '#Ecology', '#Ethics', '#Robotics']
 
-const resourceList = ref([
-  { resourceId: 11, title: '数据结构期末重点总结', courseId: 1, courseName: '数据结构', format: 'pdf', requiredPoints: 10, uploadTime: '2026-03-25', tagId: 1 },
-  { resourceId: 12, title: '高等数学近五年真题', courseId: 3, courseName: '高等数学', format: 'zip', requiredPoints: 16, uploadTime: '2026-03-22', tagId: 2 },
-  { resourceId: 13, title: '操作系统课程设计模板', courseId: 2, courseName: '操作系统', format: 'docx', requiredPoints: 8, uploadTime: '2026-03-20', tagId: 3 },
-  { resourceId: 14, title: '自动控制实验报告范例', courseId: 5, courseName: '自动控制原理', format: 'pdf', requiredPoints: 12, uploadTime: '2026-03-18', tagId: 4 },
-  { resourceId: 15, title: '计算机学院保研经验汇总', courseId: 1, courseName: '数据结构', format: 'pdf', requiredPoints: 20, uploadTime: '2026-03-15', tagId: 5 }
-])
-
-const filteredCourses = computed(() => {
-  if (selectedCollege.value === '全部学院') {
-    return courseList.value
-  }
-  return courseList.value.filter((item) => item.college === selectedCollege.value)
+const filteredCards = computed(() => {
+  if (activeCategory.value === '所有系部') return courseCards
+  return courseCards.filter((item) => item.category === activeCategory.value)
 })
 
-watch(filteredCourses, (nextCourses) => {
-  if (!selectedCourseId.value) return
-  const exists = nextCourses.some((item) => item.courseId === selectedCourseId.value)
-  if (!exists) selectedCourseId.value = null
-})
-
-const filteredResources = computed(() => {
-  return resourceList.value.filter((item) => {
-    const courseMatch = selectedCourseId.value ? item.courseId === selectedCourseId.value : true
-    const tagMatch = selectedTagId.value ? item.tagId === selectedTagId.value : true
-
-    if (selectedCollege.value === '全部学院') {
-      return courseMatch && tagMatch
-    }
-
-    const currentCourse = courseList.value.find((course) => course.courseId === item.courseId)
-    const collegeMatch = currentCourse?.college === selectedCollege.value
-    return courseMatch && tagMatch && collegeMatch
-  })
-})
-
-const goDetail = (resourceId) => {
-  router.push({ path: '/user/DocumentDetail', query: { resourceId } })
+const goTrend = () => {
+  router.push('/user/DiscoverTrend')
 }
 
 const goSearch = () => {
-  router.push({
-    path: '/user/SearchResult',
-    query: {
-      courseId: selectedCourseId.value || '',
-      tagId: selectedTagId.value || ''
-    }
-  })
+  router.push('/user/SearchResult')
 }
 
-const resetFilters = () => {
-  selectedCollege.value = '全部学院'
-  selectedCourseId.value = null
-  selectedTagId.value = null
+const goSearchByCategory = (category) => {
+  router.push({ path: '/user/SearchResult', query: { q: category } })
+}
+
+const goSearchByKeyword = (keyword) => {
+  router.push({ path: '/user/SearchResult', query: { q: keyword } })
+}
+
+const goPublish = () => {
+  router.push('/user/DocumentPublish')
 }
 </script>
 
 <style scoped>
-.discover-tag { min-height: 100vh; background: #f6f8fc; }
-.page-wrap { width: 90%; max-width: 1180px; margin: 0 auto; padding: 28px 0 44px; }
-.hero { margin-bottom: 20px; }
-.hero h1 { margin: 0 0 8px; color: #1f2a44; }
-.hero p { margin: 0; color: #6c7a96; }
+.discover-tag-page {
+  min-height: calc(100vh - 60px);
+  background: #f5f7fb;
+  padding: 14px 30px 30px;
+  position: relative;
+}
 
-.block { background: #fff; border-radius: 14px; padding: 18px; margin-bottom: 18px; box-shadow: 0 4px 14px rgba(15, 33, 67, 0.06); }
-.block-title { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
-.block-title h2 { margin: 0; font-size: 18px; color: #1f2a44; }
-.block-title span { color: #8593ad; font-size: 13px; }
-.text-btn { border: none; background: transparent; color: #3468f2; cursor: pointer; font-size: 13px; }
+.sub-nav {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  border-bottom: 1px solid #e7ebf3;
+  padding: 6px 0 10px;
+  margin-bottom: 18px;
+}
 
-.college-tabs, .tag-list { display: flex; gap: 10px; flex-wrap: wrap; }
-.chip, .tag-pill { border: 1px solid #d7def0; background: #f9fbff; color: #3f5177; border-radius: 999px; padding: 7px 13px; cursor: pointer; }
-.chip.active, .tag-pill.active { background: #3468f2; color: #fff; border-color: #3468f2; }
-.tag-pill.clear { background: #fff; border-style: dashed; }
+.sub-tab {
+  border: none;
+  background: transparent;
+  color: #7c8aa5;
+  cursor: pointer;
+  padding: 8px 2px;
+  font-size: 16px;
+}
 
-.course-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 12px; }
-.course-card { text-align: left; border: 1px solid #e3e8f5; border-radius: 10px; padding: 14px; background: #fff; cursor: pointer; }
-.course-card h3 { margin: 0 0 6px; font-size: 16px; color: #203057; }
-.course-card p { margin: 0; font-size: 12px; color: #8a97b2; }
-.course-card.active { border-color: #3468f2; box-shadow: 0 0 0 2px rgba(52, 104, 242, 0.12); }
+.sub-tab.active {
+  color: #409eff;
+  font-weight: 600;
+}
 
-.resource-list { display: grid; gap: 10px; }
-.resource-item { display: flex; justify-content: space-between; align-items: center; border: 1px solid #e9eefb; border-radius: 10px; padding: 12px; }
-.resource-item h4 { margin: 0 0 4px; color: #1f2a44; }
-.resource-item p { margin: 0; color: #8997b2; font-size: 12px; }
-.right { display: flex; align-items: center; gap: 10px; }
-.right span { color: #3468f2; font-weight: 700; }
-.right button, .jump-btn { border: none; background: #3468f2; color: #fff; border-radius: 8px; padding: 7px 12px; cursor: pointer; }
-.jump-btn { font-size: 13px; }
-.empty-state { text-align: center; color: #92a0b9; background: #fff; border-radius: 10px; padding: 18px; border: 1px dashed #ced7ef; }
+.view-switch {
+  margin-left: auto;
+  display: flex;
+  gap: 8px;
+}
+
+.switch-btn {
+  border: none;
+  background: transparent;
+  color: #8d9cb8;
+  cursor: pointer;
+  font-size: 18px;
+}
+
+.section-block {
+  background: #fff;
+  border: 1px solid #e8edf7;
+  border-radius: 14px;
+  padding: 20px;
+}
+
+.section-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 14px;
+}
+
+.section-head h2 {
+  margin: 0 0 6px;
+  color: #25314a;
+}
+
+.section-head p {
+  margin: 0;
+  color: #8b99b3;
+  font-size: 13px;
+}
+
+.view-all {
+  border: none;
+  background: transparent;
+  color: #4d92ff;
+  cursor: pointer;
+}
+
+.category-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.chip {
+  border: 1px solid #dce4f3;
+  background: #fff;
+  color: #60708f;
+  border-radius: 999px;
+  padding: 7px 14px;
+  cursor: pointer;
+}
+
+.chip.active {
+  background: #4a97ff;
+  border-color: #4a97ff;
+  color: #fff;
+}
+
+.course-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.course-card {
+  border: 1px solid #e7edf7;
+  border-radius: 12px;
+  background: #fff;
+  padding: 14px;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.course-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 14px rgba(32, 53, 92, 0.08);
+}
+
+.card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.icon-box {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  background: #eef4ff;
+  display: grid;
+  place-items: center;
+}
+
+.meta {
+  color: #8e9cb6;
+  font-size: 12px;
+}
+
+.course-card h3 {
+  margin: 0 0 6px;
+  color: #24334e;
+}
+
+.course-card p {
+  margin: 0 0 12px;
+  color: #7e8ca8;
+  font-size: 13px;
+}
+
+.tags {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.tag {
+  background: #f1f5fc;
+  color: #6f7f9d;
+  border-radius: 5px;
+  padding: 3px 7px;
+  font-size: 11px;
+}
+
+.hot-tag-block {
+  margin-top: 16px;
+  background: #eaf0fb;
+  border-radius: 14px;
+  padding: 16px;
+}
+
+.hot-title {
+  color: #283854;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+
+.hot-tag-list {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.hot-tag-item {
+  border: none;
+  background: #fff;
+  border-radius: 10px;
+  padding: 12px 8px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.hot-tag-item strong {
+  color: #4e96ff;
+}
+
+.hot-tag-item span {
+  color: #9ba7bf;
+  font-size: 12px;
+}
+
+.publish-fab {
+  position: fixed;
+  right: 24px;
+  bottom: 22px;
+  width: 56px;
+  height: 56px;
+  border: none;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #4ba2ff, #2d86f7);
+  color: #fff;
+  font-size: 34px;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 10px 22px rgba(45, 134, 247, 0.35);
+  z-index: 10000;
+}
+
+@media (max-width: 1200px) {
+  .course-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .hot-tag-list { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
 
 @media (max-width: 768px) {
-  .page-wrap { width: 95%; }
-  .resource-item { flex-direction: column; align-items: flex-start; gap: 10px; }
+  .discover-tag-page { padding: 12px; }
+  .section-head { flex-direction: column; gap: 8px; }
+  .course-grid { grid-template-columns: 1fr; }
+  .hot-tag-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 </style>

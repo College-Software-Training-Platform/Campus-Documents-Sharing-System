@@ -37,9 +37,10 @@ const toggleMode = () => {
 /* 临时切换按钮样式 */
 .temp-switch-btn {
   position: fixed !important;
-  bottom: 40px;
-  right: 40px;
-  z-index: 9999; /* 足够大，置于所有元素顶层 */
+  bottom: 24px;
+  left: 24px;
+  right: auto;
+  z-index: 9000;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 </style>

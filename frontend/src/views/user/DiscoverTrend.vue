@@ -1,6 +1,5 @@
 <template>
   <div class="discover-trend">
-    <UserHeader />
 
     <div class="trend-container">
       <div class="header-section">
@@ -86,13 +85,16 @@
         </div>
       </div>
     </div>
+
+    <button class="publish-fab" @click="goPublish" title="发布资料">
+      +
+    </button>
   </div>
 </template>
 
 <script setup>
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import UserHeader from '@/components/layout/UserHeader.vue'
 
 const router = useRouter()
 
@@ -142,10 +144,14 @@ const recommendedResources = ref([
 const goDetail = (resourceId) => {
   router.push({ path: '/user/DocumentDetail', query: { resourceId } })
 }
+
+const goPublish = () => {
+  router.push('/user/DocumentPublish')
+}
 </script>
 
 <style scoped>
-.discover-trend { min-height: 100vh; background: #f5f7fa; }
+.discover-trend { min-height: 100vh; background: #f5f7fa; position: relative; }
 .trend-container { width: 90%; max-width: 1180px; margin: 0 auto; padding: 28px 0 44px; }
 .header-section { text-align: center; margin-bottom: 22px; }
 .header-section h1 { margin: 0 0 6px; color: #1e293b; }
@@ -173,6 +179,22 @@ const goDetail = (resourceId) => {
 .trend-stats { display: grid; gap: 10px; align-content: center; }
 .stat-item { display: flex; justify-content: space-between; color: #64748b; }
 .stat-item strong { color: #3468f2; }
+.publish-fab {
+  position: fixed;
+  right: 24px;
+  bottom: 22px;
+  width: 56px;
+  height: 56px;
+  border: none;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #4ba2ff, #2d86f7);
+  color: #fff;
+  font-size: 34px;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 10px 22px rgba(45, 134, 247, 0.35);
+  z-index: 10000;
+}
 @media (max-width: 900px) {
   .trend-chart { grid-template-columns: 1fr; }
 }

@@ -1,6 +1,5 @@
 <template>
   <div class="search-result">
-    <UserHeader />
 
     <div class="page-wrap">
       <section class="title-row">
@@ -104,7 +103,6 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import UserHeader from '@/components/layout/UserHeader.vue'
 
 const route = useRoute()
 const router = useRouter()
