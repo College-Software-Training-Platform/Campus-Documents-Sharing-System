@@ -216,7 +216,7 @@ onMounted(() => {
 /* 深度选择器处理高亮样式 */
 :deep(.hl) { color: #f56c6c; font-weight: bold; }
 
-.res-desc { font-size: 13px; color: #666; margin-bottom: 12px; line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.res-desc { font-size: 13px; color: #666; margin-bottom: 12px; line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .res-meta { font-size: 12px; color: #999; display: flex; gap: 20px; align-items: center; }
 .res-meta span { display: flex; align-items: center; gap: 4px; }
 .res-meta .tag { background: #f0f7ff; color: #409EFF; padding: 2px 8px; border-radius: 4px; }
