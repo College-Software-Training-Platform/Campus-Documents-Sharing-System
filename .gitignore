@@ -29,6 +29,9 @@ backend/node_modules/
 backend/.env
 backend/.env.*
 
+# Testing (local only)
+backend/tests/
+
 # -------- AI Context (local only, do not commit) --------
 AI_context/
 
