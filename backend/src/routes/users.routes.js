@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const userController = require('../controllers/userController');
+// ✅ 【新增】获取所有用户（管理端）
+router.get('/', userController.getUsers);
 
 // --- 基础资料模块 ---
 // 获取个人详细资料

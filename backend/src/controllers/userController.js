@@ -1,31 +1,36 @@
 /**
  * @file userController.js
- * @description 用户模块业务逻辑控制器
- * @module 控制器层
+ * @description 用户模块业务逻辑控制器（已修复版）
  */
 
-const sequelize = require('../config/database'); 
+const sequelize = require('../config/database');
 const initModels = require('../models/init-models');
 
 const models = initModels(sequelize);
 const { users, resources, download_records } = models;
 
 /**
- * ✅ 管理员：获取所有用户（合并远程功能）
+ * ✅ 管理员：获取所有用户（已修复）
  */
 exports.getUsers = async (req, res) => {
     try {
-        const list = await users.findAll();
-        const data = list.map(u => {
-            const obj = u.toJSON();
-            delete obj.password;
-            return obj;
+        const list = await users.findAll({
+            attributes: ['user_ID', 'account', 'contact', 'role']
         });
 
-        res.status(200).json({ code: 200, data });
+        const data = list.map(u => ({
+            user_ID: u.user_ID,
+            account: u.account,
+            contact: u.contact,
+            role: u.role
+        }));
+
+        // ⚠️ 必须直接返回数组（适配前端）
+        res.status(200).json(data);
+
     } catch (err) {
         console.error('获取用户失败:', err);
-        res.status(500).json({ code: 500, message: '获取用户失败' });
+        res.status(500).json({ message: '获取用户失败' });
     }
 };
 
@@ -34,16 +39,17 @@ exports.getUsers = async (req, res) => {
  */
 exports.getUserProfile = async (req, res) => {
     try {
-        const { studentId } = req.query; 
-        if (!studentId) return res.status(400).json({ code: 400, message: '缺少参数：studentId' });
+        const { studentId } = req.query;
+        if (!studentId) return res.status(400).json({ message: '缺少参数：studentId' });
 
         const user = await users.findOne({ where: { account: studentId } });
-        if (!user) return res.status(404).json({ code: 404, message: '未找到用户' });
+        if (!user) return res.status(404).json({ message: '未找到用户' });
 
         const { password, ...safeData } = user.toJSON();
-        res.status(200).json({ code: 200, data: safeData });
+        res.status(200).json(safeData);
+
     } catch (error) {
-        res.status(500).json({ code: 500, message: "服务器错误", debug: error.message });
+        res.status(500).json({ message: "服务器错误", error: error.message });
     }
 };
 
@@ -52,77 +58,90 @@ exports.getUserProfile = async (req, res) => {
  */
 exports.updateProfile = async (req, res) => {
     try {
-        const { studentId, nickname, bio, major } = req.body;
-        if (!studentId) return res.status(400).json({ code: 400, message: '缺少学号标识' });
+        const { studentId, nickname } = req.body;
 
         await users.update(
-            { name: nickname, bio, major }, 
+            { name: nickname },
             { where: { account: studentId } }
         );
 
-        res.status(200).json({ code: 200, message: '资料已更新' });
+        res.status(200).json({ message: '资料已更新' });
+
     } catch (error) {
-        res.status(500).json({ code: 500, message: '更新失败' });
+        res.status(500).json({ message: '更新失败' });
     }
 };
 
 /**
- * 3. 修改登录密码
+ * 3. 修改密码
  */
 exports.changePassword = async (req, res) => {
     try {
         const { studentId, oldPassword, newPassword } = req.body;
+
         const user = await users.findOne({ where: { account: studentId } });
-        
+
         if (!user || user.password !== oldPassword) {
-            return res.status(400).json({ code: 400, message: '原密码错误' });
+            return res.status(400).json({ message: '原密码错误' });
         }
 
-        await users.update({ password: newPassword }, { where: { account: studentId } });
-        res.status(200).json({ code: 200, message: '密码修改成功' });
+        await users.update(
+            { password: newPassword },
+            { where: { account: studentId } }
+        );
+
+        res.status(200).json({ message: '密码修改成功' });
+
     } catch (error) {
-        res.status(500).json({ code: 500, message: '系统繁忙' });
+        res.status(500).json({ message: '系统繁忙' });
     }
 };
 
 /**
- * 4. 获取用户统计信息
+ * 4. 获取用户统计
  */
 exports.getUserStats = async (req, res) => {
     try {
-        const { userId } = req.query; 
+        const { userId } = req.query;
+
         const uploadCount = await resources.count({ where: { uploader_ID: userId } });
         const downloadCount = await download_records.count({ where: { user_ID: userId } });
 
-        res.status(200).json({ code: 200, data: { uploadCount, downloadCount } });
+        res.status(200).json({
+            uploadCount,
+            downloadCount
+        });
+
     } catch (error) {
-        res.status(500).json({ code: 500, message: '统计获取失败' });
+        res.status(500).json({ message: '统计获取失败' });
     }
 };
 
 /**
- * 5. 获取我的上传列表
+ * 5. 我的上传
  */
 exports.getMyResources = async (req, res) => {
     try {
         const { userId } = req.query;
+
         const list = await resources.findAll({
             where: { uploader_ID: userId },
             order: [['upload_Time', 'DESC']]
         });
-        res.status(200).json({ code: 200, data: list });
+
+        res.status(200).json(list);
+
     } catch (error) {
-        res.status(500).json({ code: 500, message: '获取上传列表失败' });
+        res.status(500).json({ message: '获取上传列表失败' });
     }
 };
 
 /**
- * 6. 获取我的下载记录
+ * 6. 我的下载
  */
 exports.getMyDownloads = async (req, res) => {
     try {
         const { userId } = req.query;
-        if (!userId) return res.status(400).json({ code: 400, message: '缺少用户ID' });
 
         const records = await download_records.findAll({
             where: { user_ID: userId },
@@ -138,26 +157,25 @@ exports.getMyDownloads = async (req, res) => {
             record_ID: r.record_ID,
             title: r.resource ? r.resource.title : '资源已失效',
             format: r.resource ? r.resource.format : '-',
-            deducted_Points: r.deducted_Points,
             download_Time: r.download_Time
         }));
 
-        res.status(200).json({ code: 200, data });
+        res.status(200).json(data);
+
     } catch (error) {
-        console.error("后端错误详情:", error);
-        res.status(500).json({ code: 500, message: '获取下载记录失败', debug: error.message });
+        res.status(500).json({ message: '获取下载记录失败' });
     }
 };
 
 /**
- * 7. 获取收藏（预留）
+ * 7. 收藏（占位）
  */
 exports.getMyFavorites = async (req, res) => {
-    res.status(200).json({ code: 200, data: [], message: '收藏模块建设中' });
+    res.status(200).json([]);
 };
 
 /**
- * 8. 获取积分明细
+ * 8. 积分明细
  */
 exports.getPointDetails = async (req, res) => {
     try {
@@ -165,20 +183,12 @@ exports.getPointDetails = async (req, res) => {
 
         const records = await download_records.findAll({
             where: { user_ID: userId },
-            include: [{ model: resources, as: 'resource', attributes: ['title'] }],
             order: [['download_Time', 'DESC']]
         });
-        
-        const data = records.map(r => ({
-            id: r.record_ID,
-            type: '下载消耗',
-            amount: `-${r.points_Spent}`,
-            target: r.resource ? r.resource.title : '未知资源',
-            time: r.download_Time
-        }));
 
-        res.status(200).json({ code: 200, data });
+        res.status(200).json(records);
+
     } catch (error) {
-        res.status(500).json({ code: 500, message: '获取积分明细失败' });
+        res.status(500).json({ message: '获取积分失败' });
     }
 };
