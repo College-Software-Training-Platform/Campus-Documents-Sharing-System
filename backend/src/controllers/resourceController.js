@@ -95,7 +95,7 @@ const uploadResource = async (req, res) => {
 const getDiscoverTrend = async (req, res) => {
     try {
         const { format, page = 1, limit = 10 } = req.query;
-        const where = { audit_Status: 'approved' };
+        const where = { [Sequelize.Op.or]: [{ audit_Status: 'approved' }, { audit_Status: 'pending' }] };
         if (format && format !== 'all') where.format = format;
 
         const { count, rows } = await resources.findAndCountAll({
