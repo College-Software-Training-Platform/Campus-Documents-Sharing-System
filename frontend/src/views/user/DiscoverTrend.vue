@@ -1,5 +1,6 @@
 <template>
   <div class="discover-trend">
+    <DiscoverSubNav />
 
     <div class="trend-container">
       <div class="header-section">
@@ -95,6 +96,7 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import DiscoverSubNav from './components/DiscoverSubNav.vue'
 
 const router = useRouter()
 
@@ -151,11 +153,11 @@ const goPublish = () => {
 </script>
 
 <style scoped>
-.discover-trend { min-height: 100vh; background: #f5f7fa; position: relative; }
-.trend-container { width: 90%; max-width: 1180px; margin: 0 auto; padding: 28px 0 44px; }
-.header-section { text-align: center; margin-bottom: 22px; }
-.header-section h1 { margin: 0 0 6px; color: #1e293b; }
-.header-section p { margin: 0; color: #64748b; }
+.discover-trend { min-height: 100vh; background: #f8fafc; padding: 10px 40px 40px; position: relative; }
+.trend-container { width: 100%; max-width: 1280px; margin: 0 auto; }
+.header-section { text-align: left; margin-bottom: 24px; border-left: 4px solid #3182ce; padding-left: 16px; }
+.header-section h1 { margin: 0 0 4px; color: #1a202c; font-size: 24px; }
+.header-section p { margin: 0; color: #4a5568; font-size: 14px; }
 .filter-tabs { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-bottom: 18px; }
 .tab-btn { border: 1px solid #d9e2f2; border-radius: 999px; padding: 7px 13px; background: #fff; cursor: pointer; }
 .tab-btn.active { background: #409eff; border-color: #409eff; color: #fff; }
