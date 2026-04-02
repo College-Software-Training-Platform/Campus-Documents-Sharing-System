@@ -2,7 +2,16 @@
 const express = require('express');
 const router = express.Router();
 
-// 控制器
+
+/**
+ * ✅ 1. 管理员模块 (合并自旧版 user.routes.js)
+ * 这里保留了旧版想要实现的“获取所有用户”功能
+ */
+router.get('/', userController.getUsers); 
+
+/**
+ * ✅ 2. 个人资料模块
+ */
 const userController = require('../controllers/userController');
 const resourceController = require('../controllers/resourceController');
 
@@ -29,6 +38,7 @@ router.post('/password', authMiddleware, userController.changePassword);
 router.get('/stats', authMiddleware, userController.getUserStats);
 
 /**
+<<<<<<< HEAD
  * ✅ 4. 资源与积分模块
  */
 router.get('/resources', authMiddleware, userController.getMyResources);
@@ -40,5 +50,6 @@ router.get('/points', authMiddleware, userController.getPointDetails);
  * ✅ 5. 下载动作（扣积分）
  */
 router.post('/download-action', authMiddleware, resourceController.downloadResource);
+
 
 module.exports = router;
