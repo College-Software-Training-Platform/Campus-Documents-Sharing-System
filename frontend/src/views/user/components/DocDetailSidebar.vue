@@ -16,7 +16,13 @@
       </div>
       <div class="points-desc">下载后永久免费，支持全平台阅读</div>
       
-      <el-button type="primary" size="large" class="download-btn">
+      <el-button 
+        type="primary" 
+        size="large" 
+        class="download-btn"
+        :loading="downloadLoading"
+        @click="handleDownload"
+      >
         <el-icon><Download /></el-icon> 立即下载
       </el-button>
     </el-card>
@@ -76,8 +82,10 @@
 
 <script setup>
 import { Coin, Download } from '@element-plus/icons-vue'
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useResourceStore } from '@/store/resource'
+import { downloadResource } from '@/api/resources'
+import { ElMessageBox, ElMessage } from 'element-plus'
 
 const props = defineProps({
   resourceId: {
@@ -88,6 +96,63 @@ const props = defineProps({
 
 const resourceStore = useResourceStore()
 const resource = computed(() => resourceStore.currentResource)
+const downloadLoading = ref(false)
+
+const handleDownload = async () => {
+  try {
+    const points = resource.value?.required_Points || 0
+    await ElMessageBox.confirm(
+      `下载该资源将扣除 ${points} 积分，是否确认？`,
+      '下载确认',
+      {
+        confirmButtonText: '确认下载',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
+    )
+
+    downloadLoading.value = true
+    // 调用接口获取 blob
+    const blob = await downloadResource(props.resourceId)
+    
+    // ✅ 预检：如果 blob 很小且类型是 json，说明后端返回的是错误信息而非文件流
+    if (blob.size < 1024 && blob.type === 'application/json') {
+      const reader = new FileReader()
+      reader.onload = () => {
+        try {
+          const errorRes = JSON.parse(reader.result)
+          ElMessage.error(errorRes.message || '下载失败')
+        } catch (e) {
+          ElMessage.error('下载过程发生未知错误')
+        }
+      }
+      reader.readAsText(blob)
+      return
+    }
+
+    // 执行文件下载
+    const url = window.URL.createObjectURL(new Blob([blob]))
+    const link = document.createElement('a')
+    link.href = url
+    // 尽量获取文件名
+    const fileName = `${resource.value?.title || 'resource'}.${resource.value?.format || 'bin'}`
+    link.setAttribute('download', fileName)
+    document.body.appendChild(link)
+    link.click()
+    
+    // 清理资源
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(url)
+
+    ElMessage.success('获得资源成功，积分已扣除')
+  } catch (err) {
+    if (err !== 'cancel') {
+      console.error('下载任务异常:', err)
+    }
+  } finally {
+    downloadLoading.value = false
+  }
+}
 </script>
 
 <style scoped>

@@ -62,3 +62,16 @@ export const getResourceDetail = (resourceId) => {
     method: 'get'
   });
 };
+
+/**
+ * 下载资源 (获取文件流)
+ * @param {number|string} resourceId 
+ */
+export const downloadResource = (resourceId) => {
+  return request({
+    url: '/resources/download',
+    method: 'post',
+    data: { resourceId },
+    responseType: 'blob' // 必须设置为 blob 才能处理二进制流
+  });
+};

@@ -15,31 +15,57 @@ const { resources, users, download_records } = models;
 const downloadResource = async (req, res) => {
     let t;
     try {
-        const { userId, resourceId } = req.body;
+        const { resourceId } = req.body;
+        const userId = req.user.userId; // 强制使用鉴权后的用户ID
+
         const resource = await resources.findByPk(resourceId);
         if (!resource) return res.status(404).json({ code: 404, message: '资源不存在' });
 
         const buyer = await users.findByPk(userId);
         if (!buyer) return res.status(404).json({ code: 404, message: '用户不存在' });
 
-        const COST = 5; 
+        const COST = resource.required_Points || 0; // 使用资源定义的积分
         if (buyer.points_Balance < COST) return res.status(400).json({ code: 400, message: '积分不足' });
 
-        const absolutePath = path.resolve(process.cwd(), resource.file_Path);
-        if (!fs.existsSync(absolutePath)) return res.status(404).json({ code: 404, message: '文件丢失' });
+        // ✅ 修正路径解析：__dirname 在 src/controllers，回溯两层到 backend 根目录获取 uploads
+        const absolutePath = path.resolve(__dirname, '../../', resource.file_Path);
+        if (!fs.existsSync(absolutePath)) {
+            console.error('找不到物理文件:', absolutePath);
+            return res.status(404).json({ code: 404, message: '物理文件丢失，请联系管理员' });
+        }
 
         t = await sequelize.transaction();
-        await users.decrement('points_Balance', { by: COST, where: { user_ID: userId }, transaction: t });
-        await users.increment('points_Balance', { by: 2, where: { user_ID: resource.uploader_ID }, transaction: t });
-        await resources.increment('download_Count', { by: 1, where: { resource_ID: resourceId }, transaction: t });
-        await download_records.create({ user_ID: userId, resource_ID: resourceId, deducted_Points: COST, download_Time: new Date() }, { transaction: t });
+        
+        // 核心事务逻辑
+        if (COST > 0) {
+            await users.decrement('points_Balance', { by: COST, where: { user_ID: userId }, transaction: t });
+            // 上传者获得 40% 的收益 (简单演示)
+            const income = Math.floor(COST * 0.4);
+            if (income > 0) {
+                await users.increment('points_Balance', { by: income, where: { user_ID: resource.uploader_ID }, transaction: t });
+            }
+        }
+
+        await download_records.create({ 
+            user_ID: userId, 
+            resource_ID: resourceId, 
+            deducted_Points: COST, 
+            download_Time: new Date() 
+        }, { transaction: t });
 
         await t.commit();
-        return res.download(absolutePath, `${resource.title}.${resource.format}`);
+        
+        // 执行下载 (增加回调以捕获发送流时的错误)
+        return res.download(absolutePath, `${resource.title}.${resource.format}`, (err) => {
+            if (err) {
+                console.error('文件传输过程中发生错误:', err);
+                // 即使传输失败也无需再次 res.send，因为 res.download 可能已经发送了部分响应
+            }
+        });
     } catch (err) {
         if (t) await t.rollback();
-        console.error(err);
-        return res.status(500).json({ code: 500, message: '下载失败' });
+        console.error('下载预处理失败:', err);
+        return res.status(500).json({ code: 500, message: '系统下载处理失败' });
     }
 };
 
