@@ -60,9 +60,10 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { ElMessage } from 'element-plus'
 import axios from 'axios'
 
-// 修正引入名称，保持一致
+// 组件引入
 import MyUploads from './components/MyUploads.vue' 
 import MyDownloads from './components/MyDownloads.vue' 
 import MyFavorites from './components/MyFavorites.vue' 
@@ -83,12 +84,26 @@ const userInfo = ref({
   userId: null
 })
 
+/**
+ * 动态获取当前登录用户数据
+ */
 const fetchUserData = async () => {
   try {
-    // 后期建议从登录 token 或 localStorage 中动态获取
-    const targetStudentId = '2024214283' 
+    // 1. 从 localStorage 获取登录时保存的用户信息
+    // 注意：这里的 key 'user' 必须和你登录页面存入的 key 一致
+    const storedUser = localStorage.getItem('user');
     
-    // 1. 获取基础资料
+    if (!storedUser) {
+      ElMessage.error('未检测到登录信息，请重新登录');
+      userInfo.value.nickname = '未登录';
+      return;
+    }
+
+    const currentUser = JSON.parse(storedUser);
+    // 优先使用缓存中的 account，如果没有则使用你之前的测试账号作为兜底
+    const targetStudentId = currentUser.account || '2024214283'; 
+    
+    // 2. 获取基础资料
     const profileRes = await axios.get(`http://localhost:3000/api/users/profile`, {
       params: { studentId: targetStudentId }
     })
@@ -96,15 +111,14 @@ const fetchUserData = async () => {
     if (profileRes.data.code === 200) {
       const data = profileRes.data.data
       
-      // 更新个人资料
       userInfo.value.nickname = data.name || '未设置昵称'
       userInfo.value.bio = data.bio || '这位同学很懒，什么都没写'
       userInfo.value.studentId = data.account
       userInfo.value.points = data.points_Balance
       userInfo.value.avatarUrl = data.avatar_Url
-      userInfo.value.userId = data.user_ID // 这里的 ID 变化会触发 v-if 的组件加载
+      userInfo.value.userId = data.user_ID 
 
-      // 2. 获取统计数据
+      // 3. 获取统计数据
       const statsRes = await axios.get(`http://localhost:3000/api/users/stats`, {
         params: { userId: data.user_ID }
       })
@@ -112,9 +126,14 @@ const fetchUserData = async () => {
         userInfo.value.uploadCount = statsRes.data.data.uploadCount
         userInfo.value.downloadCount = statsRes.data.data.downloadCount
       }
+    } else {
+      userInfo.value.nickname = '查无此人';
+      ElMessage.warning('数据库中未找到该用户信息');
     }
   } catch (error) {
-    console.error('Profile 数据加载失败:', error)
+    console.error('Profile 数据加载失败:', error);
+    userInfo.value.nickname = '加载失败';
+    ElMessage.error('网络请求失败，请确保后端服务已启动');
   }
 }
 
@@ -124,6 +143,7 @@ onMounted(() => {
 </script>
 
 <style scoped>
+/* 样式部分保持不变 */
 .profile-container { 
   max-width: 1100px; 
   margin: 30px auto; 

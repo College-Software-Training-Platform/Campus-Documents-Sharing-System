@@ -8,7 +8,7 @@
         </el-breadcrumb>
       </div>
       <h2 class="search-title">
-        "{{ searchKeyword }}" 的搜索结果 
+        "{{ searchKeyword }}" 的搜索结果
         <span class="count">共找到 {{ total }} 条资源</span>
       </h2>
     </div>
@@ -46,7 +46,7 @@
             </div>
           </div>
         </template>
-        
+
         <template #default>
           <div v-if="results.length > 0">
             <div v-for="item in results" :key="item.id" class="resource-card">
@@ -63,7 +63,7 @@
                 </div>
               </div>
               <div class="res-action">
-                <div class="price" :class="{ 'free': item.points === 0 }">
+                <div class="price" :class="{ free: item.points === 0 }">
                   {{ item.points > 0 ? item.points + ' 积分' : '免费' }}
                 </div>
                 <el-button type="primary" plain size="small" @click="goDetail(item.id)">查看详情</el-button>
@@ -90,54 +90,56 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, watch } from 'vue'
+import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { User, Calendar } from '@element-plus/icons-vue'
+import { useResourceStore } from '@/store/resource'
 
 const route = useRoute()
 const router = useRouter()
+const resourceStore = useResourceStore()
 
-// --- 状态变量 ---
 const searchKeyword = ref(route.query.q || '')
-const loading = ref(true)
-const total = ref(0)
 const currentPage = ref(1)
-const results = ref([])
 
-// 筛选条件
 const filter = reactive({
   category: 'all',
   sort: 'default'
 })
 
-// --- 核心逻辑 ---
+const loading = computed(() => resourceStore.searchResults.loading)
+const total = computed(() => resourceStore.searchResults.pagination.total || 0)
 
-// 模拟 API 请求
-const fetchResults = () => {
-  loading.value = true
-  // 实际开发请使用 axios.get('/api/search', { params: { q: searchKeyword.value, ...filter, page: currentPage.value } })
-  setTimeout(() => {
-    // 模拟数据生成
-    results.value = [
-      { id: 1, title: '计算机网络期末复习题库', description: '包含最新真题及详细解答，适合期末冲刺和考研复习。', author: '重邮学长', date: '2026-03-20', category: '历年真题', points: 5, type: 'pdf' },
-      { id: 2, title: 'C++ STL 标准库思维导图', description: '一图看懂 STL 六大组件关系，助力蓝桥杯等算法竞赛。', author: '编程小能手', date: '2026-03-25', category: '学霸笔记', points: 0, type: 'img' }
-    ]
-    total.value = 2 // 假设总数
-    loading.value = false
-  }, 600)
+const results = computed(() => {
+  return (resourceStore.searchResults.data || []).map((item) => ({
+    id: item.resource_ID,
+    title: item.title,
+    description: item.ai_Summary || item.extracted_Text || '暂无描述',
+    author: item.uploader?.name || '未知上传者',
+    date: item.upload_Time ? String(item.upload_Time).slice(0, 10) : '-',
+    category: item.course?.course_Name || '未分类',
+    points: item.required_Points || 0,
+    type: item.format || 'default'
+  }))
+})
+
+const fetchResults = async () => {
+  await resourceStore.fetchSearchResults({
+    q: searchKeyword.value,
+    category: filter.category,
+    sort: filter.sort,
+    page: currentPage.value,
+    limit: 10
+  })
 }
 
-// 关键词高亮 (简单实现)
 const highlight = (text) => {
-  if (!searchKeyword.value) return text
+  if (!searchKeyword.value || !text) return text
   const reg = new RegExp(`(${searchKeyword.value})`, 'gi')
   return text.replace(reg, '<span class="hl">$1</span>')
 }
 
-const getFileIcon = (type) => {
-  // 生产环境建议准备一套图标映射表
-  return '/icons/default_file.png' 
-}
+const getFileIcon = () => '/icons/default_file.png'
 
 const handlePageChange = (val) => {
   currentPage.value = val
@@ -145,19 +147,18 @@ const handlePageChange = (val) => {
 }
 
 const goDetail = (id) => {
-  router.push(`/document/${id}`)
+  router.push({ path: '/user/DocumentDetail', query: { resourceId: id } })
 }
 
-// --- 监听器 ---
+watch(
+  () => route.query.q,
+  (newVal) => {
+    searchKeyword.value = newVal || ''
+    currentPage.value = 1
+    fetchResults()
+  }
+)
 
-// 1. 监听 URL 搜索词变化 (当用户在顶部搜索框再次搜索时)
-watch(() => route.query.q, (newVal) => {
-  searchKeyword.value = newVal || ''
-  currentPage.value = 1
-  fetchResults()
-})
-
-// 2. 监听筛选条件变化自动刷新
 watch([() => filter.category, () => filter.sort], () => {
   currentPage.value = 1
   fetchResults()
@@ -213,7 +214,6 @@ onMounted(() => {
 .res-info h3 { margin: 0 0 8px 0; color: #303133; cursor: pointer; font-size: 17px; }
 .res-info h3:hover { color: #409EFF; }
 
-/* 深度选择器处理高亮样式 */
 :deep(.hl) { color: #f56c6c; font-weight: bold; }
 
 .res-desc { font-size: 13px; color: #666; margin-bottom: 12px; line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }

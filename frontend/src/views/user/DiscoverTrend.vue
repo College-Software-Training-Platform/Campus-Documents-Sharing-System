@@ -20,10 +20,10 @@
       </div>
 
       <div class="course-list-row">
-        <ResourceCard 
-          v-for="item in displayResources" 
-          :key="item.resourceId" 
-          :item="{ ...item, price: item.points }" 
+        <ResourceCard
+          v-for="item in displayResources"
+          :key="item.resourceId"
+          :item="{ ...item, price: item.points }"
         />
       </div>
     </div>
@@ -35,7 +35,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import DiscoverSubNav from './components/DiscoverSubNav.vue'
 import ResourceCard from './components/ResourceCard.vue'
@@ -52,39 +52,25 @@ const filterTabs = [
 ]
 const activeTab = ref('all')
 
-const hotResources = computed(() => resourceStore.resources)
+const displayResources = computed(() => {
+  const data = resourceStore.discoverTrend.data.length
+    ? resourceStore.discoverTrend.data
+    : resourceStore.resources
 
-// const filteredHotResources = computed(() => {
-//   if (activeTab.value === 'all') return hotResources.value
-//   return hotResources.value.filter((item) => item.format === activeTab.value)
-// })
+  return data.slice(0, 4).map((item) => ({
+    ...item,
+    resourceId: item.resourceId || item.resource_ID,
+    points: item.points ?? item.required_Points ?? 0
+  }))
+})
 
-// const trendData = ref([
-//   { day: '1周前', height: 45 },
-//   { day: '2周前', height: 52 },
-//   { day: '3周前', height: 38 },
-//   { day: '4周前', height: 61 },
-//   { day: '5周前', height: 48 },
-//   { day: '6周前', height: 55 },
-//   { day: '本周', height: 78 }
-// ])
+onMounted(() => {
+  resourceStore.fetchDiscoverTrend({ format: activeTab.value, sort: 'hottest', page: 1, limit: 10 })
+})
 
-// const weeklyNew = ref(156)
-// const monthlyNew = ref(892)
-// const avgQuality = ref('4.7 ⭐')
-
-// const recommendedResources = ref([
-//   { resourceId: 207, title: '2024年考研数学真题详解', uploader: '张老师', points: 18 },
-//   { resourceId: 208, title: 'Python爬虫实战项目', uploader: '李同学', points: 25 },
-//   { resourceId: 209, title: '前端开发完整指南', uploader: '王工程师', points: 20 },
-//   { resourceId: 210, title: '算法竞赛题库', uploader: '竞赛组', points: 15 }
-// ])
-
-const displayResources = computed(() => hotResources.value.slice(0, 4))
-
-const goDetail = (resourceId) => {
-  router.push({ path: '/user/DocumentDetail', query: { resourceId } })
-}
+watch(activeTab, (format) => {
+  resourceStore.fetchDiscoverTrend({ format, sort: 'hottest', page: 1, limit: 10 })
+})
 
 const goPublish = () => {
   router.push('/user/DocumentPublish')

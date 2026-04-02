@@ -18,5 +18,9 @@ router.get('/pending', async (req, res) => {
 });
 
 router.put('/:id/audit', ResourceController.auditResource)
+router.get('/discover/trend', DiscoverController.getDiscoverTrend);
+router.get('/courses', DiscoverController.getCourses);
+router.get('/tags/hot', DiscoverController.getHotTags);
+router.get('/search', SearchController.searchResources);
 
 module.exports = router;
