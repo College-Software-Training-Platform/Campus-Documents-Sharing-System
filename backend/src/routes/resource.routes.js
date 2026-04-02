@@ -5,6 +5,8 @@ const express = require('express');
 const router = express.Router();
 
 const ResourceController = require('../controllers/resourceController');
+const DiscoverController = require('../controllers/discoverController');
+const SearchController = require('../controllers/searchController');
 
 console.log('ResourceController =', ResourceController);
 
