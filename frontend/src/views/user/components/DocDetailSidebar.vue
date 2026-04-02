@@ -12,7 +12,7 @@
       
       <div class="points-info">
         <span class="label">下载所需积分</span>
-        <span class="value"><el-icon><Coin /></el-icon> {{ resource?.points || 0 }}</span>
+        <span class="value"><el-icon><Coin /></el-icon> {{ resource?.required_Points || 0 }}</span>
       </div>
       <div class="points-desc">下载后永久免费，支持全平台阅读</div>
       
@@ -24,24 +24,24 @@
     <!-- 作者信息卡片 -->
     <el-card class="sidebar-card author-card" shadow="never">
       <div class="author-header">
-        <el-avatar :size="50" src="https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png" />
+        <el-avatar :size="50" :src="resource?.uploader?.avatar_Url || 'https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png'" />
         <div class="author-details">
-          <h4>张小智</h4>
-          <span>2021级 · 计科</span>
+          <h4>{{ resource?.uploader?.name || '未知用户' }}</h4>
+          <span>{{ resource?.course?.college || '校友' }}</span>
         </div>
         <el-button class="follow-btn" type="primary" plain size="small">关注</el-button>
       </div>
       <div class="author-stats">
         <div class="stat-item">
-          <span class="count">128</span>
+          <span class="count">--</span>
           <span class="label">上传资源</span>
         </div>
         <div class="stat-item">
-          <span class="count">2.5k</span>
+          <span class="count">--</span>
           <span class="label">粉丝</span>
         </div>
         <div class="stat-item">
-          <span class="count">14.2k</span>
+          <span class="count">--</span>
           <span class="label">获赞</span>
         </div>
       </div>
@@ -59,10 +59,10 @@
         <div class="recommend-item" v-for="i in 3" :key="i">
           <div class="rect-cover"></div>
           <div class="recommend-info">
-            <h5 class="text-ellipsis">深度学习基础：从神经元到CNN/RNN</h5>
+            <h5 class="text-ellipsis">推荐资源正在加载...</h5>
             <div class="recommend-meta">
-              <span><el-icon><Download /></el-icon> 842</span>
-              <span class="recommend-points"><el-icon><Coin /></el-icon> 20</span>
+              <span><el-icon><Download /></el-icon> --</span>
+              <span class="recommend-points"><el-icon><Coin /></el-icon> --</span>
             </div>
           </div>
         </div>
@@ -87,9 +87,7 @@ const props = defineProps({
 })
 
 const resourceStore = useResourceStore()
-const resource = computed(() => {
-  return resourceStore.resources.find(r => r.resourceId == props.resourceId)
-})
+const resource = computed(() => resourceStore.currentResource)
 </script>
 
 <style scoped>

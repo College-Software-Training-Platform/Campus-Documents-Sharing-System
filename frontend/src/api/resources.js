@@ -44,14 +44,21 @@ export const getHotTags = (limit = 6) => {
   });
 };
 
-/**
- * 多条件搜索资源
- * @param {Object} params - { q, category, sort, page, limit }
- */
 export const searchResources = (params) => {
   return request({
     url: '/resources/search',
     method: 'get',
     params
+  });
+};
+
+/**
+ * 获取资源详细信息
+ * @param {number|string} resourceId 
+ */
+export const getResourceDetail = (resourceId) => {
+  return request({
+    url: `/resources/${resourceId}`,
+    method: 'get'
   });
 };

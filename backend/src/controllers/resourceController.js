@@ -129,6 +129,36 @@ const rejectResource = async (resourceId) => {
     await resources.update({ audit_Status: 'rejected' }, { where: { resource_ID: resourceId } });
 };
 
+/**
+ * ✅ 核心逻辑：获取资源详情
+ */
+const getResourceDetail = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const resource = await resources.findByPk(id, {
+            include: [
+                { model: users, as: 'uploader', attributes: ['user_ID', 'name', 'avatar_Url'] },
+                { model: models.courses, as: 'course', attributes: ['course_Name', 'college'] },
+                { 
+                    model: models.tags, 
+                    as: 'tags', 
+                    through: { attributes: [] },
+                    attributes: ['tag_Name'] 
+                }
+            ]
+        });
+
+        if (!resource) {
+            return res.status(404).json({ code: 404, message: '资源不存在' });
+        }
+
+        res.json({ code: 200, data: resource });
+    } catch (err) {
+        console.error('获取资源详情失败:', err);
+        res.status(500).json({ code: 500, message: '获取资源详情失败' });
+    }
+};
+
 const getCourses = async (req, res) => {
     try {
         const list = await models.courses.findAll();
@@ -145,5 +175,6 @@ module.exports = {
     getPendingResources,
     approveResource,
     rejectResource,
+    getResourceDetail, // 导出详情接口
     getCourses
 };

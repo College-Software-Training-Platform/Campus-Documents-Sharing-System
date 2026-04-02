@@ -30,10 +30,27 @@ export const useResourceStore = defineStore('resource', {
       data: [],
       loading: false,
       pagination: { total: 0, page: 1, limit: 10, pages: 0 }
-    }
+    },
+
+    // 当前详情资源
+    currentResource: null
   }),
 
   actions: {
+    /**
+     * 获取单个资源详情
+     */
+    async fetchResourceById(id) {
+      if (!id) return
+      try {
+        const response = await resourceApi.getResourceDetail(id)
+        this.currentResource = response.data
+        return response.data
+      } catch (err) {
+        console.error('获取资源详情失败:', err)
+        this.currentResource = null
+      }
+    },
     /**
      * 添加资源（发布时使用）
      */
