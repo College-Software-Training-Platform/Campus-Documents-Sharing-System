@@ -1,5 +1,5 @@
 <template>
-  <div class="card fade">
+  <div class="card fade" @click="handlePreview">
     <div class="card-img"></div>
     <div class="card-body">
       <h4>{{ item.title }}</h4>
@@ -7,18 +7,29 @@
         <img src="@/assets/icon/credits.svg" class="icon" alt="credits" />
         {{ item.price }} 
       </div>
-      <button class="btn">预览资料</button>
+      <button class="btn" @click.stop="handlePreview">预览资料</button>
     </div>
   </div>
 </template>
 
 <script setup>
-defineProps({
+import { useRouter } from 'vue-router'
+
+const props = defineProps({
   item: {
     type: Object,
     required: true
   }
 })
+
+const router = useRouter()
+
+const handlePreview = () => {
+  router.push({
+    path: '/user/DocumentDetail',
+    query: { resourceId: props.item.resourceId }
+  })
+}
 </script>
 
 <style scoped>

@@ -23,7 +23,7 @@
         <ResourceCard 
           v-for="item in displayResources" 
           :key="item.resourceId" 
-          :item="{ title: item.title, price: item.points }" 
+          :item="{ ...item, price: item.points }" 
         />
       </div>
     </div>

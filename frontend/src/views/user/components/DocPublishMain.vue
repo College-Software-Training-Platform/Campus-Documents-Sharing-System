@@ -52,16 +52,14 @@
               @keyup.enter="addTag"
             />
             <div class="tags-container mt-2" v-if="publishForm.tags.length > 0">
-              <el-tag
+              <CommonTag
                 v-for="tag in publishForm.tags"
                 :key="tag"
+                :text="tag"
                 closable
-                type="info"
                 class="mr-2"
                 @close="removeTag(tag)"
-              >
-                {{ tag }}
-              </el-tag>
+              />
             </div>
           </el-form-item>
         </el-col>
@@ -130,6 +128,7 @@ import axios from 'axios'
 import { ElMessage } from 'element-plus'
 import { useResourceStore } from '@/store/resource'
 import { useRouter } from 'vue-router'
+import CommonTag from './CommonTag.vue'
 
 const resourceStore = useResourceStore()
 const router = useRouter()
@@ -138,7 +137,7 @@ const aiLoading = ref(false)
 const publishForm = reactive({
   title: '',
   category: '',
-  tags: ['笔记', '考研专用'],
+  tags: [],
   description: '',
   points: 0,
   agreement: false
