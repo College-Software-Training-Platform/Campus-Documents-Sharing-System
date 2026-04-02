@@ -17,4 +17,6 @@ router.get('/pending', async (req, res) => {
   }
 });
 
+router.put('/:id/audit', ResourceController.auditResource)
+
 module.exports = router;

@@ -1,35 +1,44 @@
+// backend/src/routes/users.routes.js 
 const express = require('express');
 const router = express.Router();
+
+// 控制器
 const userController = require('../controllers/userController');
-const authMiddleware = require('../middlewares/auth.middleware');
-// 1. 引入你刚刚修改好的资源控制器
 const resourceController = require('../controllers/resourceController');
 
-// --- 公放路由 (无需令牌) ---
+// 中间件
+const authMiddleware = require('../middlewares/auth.middleware');
+
+/**
+ * ✅ 1. 公共路由（无需登录）
+ */
 router.post('/login', userController.login);
 router.post('/register', userController.register);
 
-// ✅ 【新增】获取所有用户（管理端）
+/**
+ * ✅ 2. 管理员模块
+ */
 router.get('/', userController.getUsers);
 
-// --- 基础资料模块 (部分需要令牌) ---
-router.get('/profile', userController.getUserProfile);
-router.post('/update', userController.updateProfile);
-router.post('/password', userController.changePassword);
-router.get('/stats', userController.getUserStats);
+/**
+ * ✅ 3. 个人资料模块（建议加鉴权🔥）
+ */
+router.get('/profile', authMiddleware, userController.getUserProfile);
+router.post('/update', authMiddleware, userController.updateProfile);
+router.post('/password', authMiddleware, userController.changePassword);
+router.get('/stats', authMiddleware, userController.getUserStats);
 
-// --- 资源管理模块 ---
-// 获取“我的上传”列表
-router.get('/resources', userController.getMyResources);
-// 获取“我的下载”记录
-router.get('/downloads', userController.getMyDownloads);
-// 获取“我的收藏”列表
-router.get('/favorites', userController.getMyFavorites);
-// 获取积分变动明细
-router.get('/points', userController.getPointDetails);
+/**
+ * ✅ 4. 资源与积分模块
+ */
+router.get('/resources', authMiddleware, userController.getMyResources);
+router.get('/downloads', authMiddleware, userController.getMyDownloads);
+router.get('/favorites', authMiddleware, userController.getMyFavorites);
+router.get('/points', authMiddleware, userController.getPointDetails);
 
-// 2. 新增：处理下载行为的路由 (积分扣除 + 文件传输)
-// 路径建议定为 /download-action，避免和获取下载列表的 /downloads 冲突
-router.post('/download-action', resourceController.downloadResource);
+/**
+ * ✅ 5. 下载动作（扣积分）
+ */
+router.post('/download-action', authMiddleware, resourceController.downloadResource);
 
 module.exports = router;

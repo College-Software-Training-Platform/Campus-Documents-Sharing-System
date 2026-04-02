@@ -1,18 +1,17 @@
 //用户反馈
 
 // backend/src/routes/feedback.routes.js
-const express = require('express');
-const router = express.Router();
+const express = require('express')
+const router = express.Router()
+const feedbackController = require('../controllers/feedbackController')
 
-const FeedbackController = require('../controllers/feedbackController');
+// 获取列表
+router.get('/', feedbackController.getFeedbacks)
 
-router.get('/', async (req, res) => {
-  try {
-    const feedbacks = await FeedbackController.getFeedbacks();
-    res.json(feedbacks);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+// 标记已处理
+router.put('/:id', feedbackController.processFeedback)
 
-module.exports = router;
+// 删除
+router.delete('/:id', feedbackController.deleteFeedback)
+
+module.exports = router
