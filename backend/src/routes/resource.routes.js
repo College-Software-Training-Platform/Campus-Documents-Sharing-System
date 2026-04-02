@@ -6,6 +6,8 @@ const router = express.Router();
 
 const ResourceController = require('../controllers/resourceController');
 
+console.log('ResourceController =', ResourceController);
+
 router.get('/pending', async (req, res) => {
   try {
     const resources = await ResourceController.getPendingResources();

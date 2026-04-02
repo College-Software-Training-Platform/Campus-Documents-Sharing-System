@@ -23,8 +23,9 @@
         </template>
       </el-table-column>
 
-      <el-table-column label="操作" width="120" fixed="right">
+      <el-table-column label="操作" width="200" fixed="right">
         <template #default="scope">
+          <el-button link type="success" @click="handleDownload(scope.row)">下载测试</el-button>
           <el-button link type="primary" @click="handleEdit(scope.row)">编辑</el-button>
           <el-button link type="danger" @click="handleDelete(scope.row)">删除</el-button>
         </template>
@@ -51,6 +52,7 @@ const formatDate = (dateStr) => {
   return !isNaN(date.getTime()) ? date.toLocaleString() : dateStr
 }
 
+// 获取列表数据
 const fetchData = async () => {
   if (!props.userId) return
   
@@ -60,19 +62,75 @@ const fetchData = async () => {
       params: { userId: props.userId }
     })
     
-    console.log('--- 后端返回原始数据 ---', res.data)
-    
     if (res.data.code === 200) {
-      // 重点：有些后端返回的是 res.data.data，有些是 res.data.data.list
-      // 这里根据你之前的统计数据能显示，假设数据就在 res.data.data 里
       list.value = Array.isArray(res.data.data) ? res.data.data : []
-      console.log('--- 赋值给表格的数据 ---', list.value)
     }
   } catch (error) {
     console.error('获取列表失败:', error)
     ElMessage.error('获取上传列表失败')
   } finally {
     loading.value = false
+  }
+}
+
+/**
+ * ✅ 核心功能：处理积分下载
+ */
+const handleDownload = async (row) => {
+  if (!props.userId) {
+    ElMessage.warning('用户信息未加载，请稍候')
+    return
+  }
+
+  try {
+    // 1. 调用后端下载动作接口
+    // 注意：必须设置 responseType 为 'blob' 才能接收文件流
+    const response = await axios.post('http://localhost:3000/api/users/download-action', {
+      userId: props.userId,
+      resourceId: row.resource_ID
+    }, { 
+      responseType: 'blob' 
+    })
+
+    // 2. 创建 Blob 对象并生成下载链接
+    const blob = new Blob([response.data])
+    const url = window.URL.createObjectURL(blob)
+    
+    // 3. 创建虚拟 A 标签触发浏览器下载
+    const link = document.createElement('a')
+    link.href = url
+    // 拼接文件名：标题.格式
+    link.setAttribute('download', `${row.title}.${row.format || 'bin'}`)
+    document.body.appendChild(link)
+    link.click()
+    
+    // 4. 下载后移除临时元素并释放内存
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(url)
+
+    ElMessage.success('积分扣除成功，文件开始下载')
+    
+    // 5. 关键：重新拉取列表，更新页面显示的“下载次数”
+    fetchData()
+
+  } catch (error) {
+    console.error('下载失败详情:', error)
+    
+    // 特殊处理：如果是 Blob 类型报错，需要读取其内部的 JSON 错误信息
+    if (error.response && error.response.data instanceof Blob) {
+      const reader = new FileReader()
+      reader.onload = () => {
+        try {
+          const result = JSON.parse(reader.result)
+          ElMessage.error(result.message || '下载失败')
+        } catch (e) {
+          ElMessage.error('积分不足或服务器资源丢失')
+        }
+      }
+      reader.readAsText(error.response.data)
+    } else {
+      ElMessage.error('网络错误或服务器无响应')
+    }
   }
 }
 
