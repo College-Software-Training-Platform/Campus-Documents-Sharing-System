@@ -6,7 +6,7 @@ const router = express.Router();
 const userController = require('../controllers/userController');
 const resourceController = require('../controllers/resourceController');
 
-// 中间件
+// 中间件（👉 保留，后面很重要）
 const authMiddleware = require('../middlewares/auth.middleware');
 
 /**
@@ -21,7 +21,7 @@ router.post('/register', userController.register);
 router.get('/', userController.getUsers);
 
 /**
- * ✅ 3. 个人资料模块（建议加鉴权🔥）
+ * ✅ 3. 个人资料模块（必须加鉴权🔥）
  */
 router.get('/profile', authMiddleware, userController.getUserProfile);
 router.post('/update', authMiddleware, userController.updateProfile);
