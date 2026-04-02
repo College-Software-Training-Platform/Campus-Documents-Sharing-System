@@ -20,14 +20,7 @@
       </div>
 
       <div class="cards">
-        <div class="card fade" v-for="(item, index) in dataList" :key="index">
-          <div class="card-img"></div>
-          <div class="card-body">
-            <h4>{{ item.title }}</h4>
-            <div class="price">{{ item.price }} 积分</div>
-            <button class="btn">预览资料</button>
-          </div>
-        </div>
+        <ResourceCard v-for="(item, index) in dataList" :key="index" :item="item" />
       </div>
 
       <div style="text-align:center; margin-top:20px">
@@ -46,6 +39,7 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
 import UserHeader from '@/components/layout/UserHeader.vue'
+import ResourceCard from '@/views/user/components/ResourceCard.vue'
 
 const dataList = ref([
   { title: '数据结构精讲', price: 10 },
@@ -155,42 +149,7 @@ a {
   gap: 20px;
 }
 
-/* 卡片的具体效果 */
-.card {
-  background: #fff;
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, .05);
-  transition: .3s;
-}
-
-.card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, .1);
-}
-
-/* 卡片的图片 */
-.card-img {
-  height: 120px;
-  background: #ddd;
-}
-
-/* 卡片的主体 */
-.card-body {
-  padding: 15px;
-}
-.card-body h4 {
-  margin: 0;
-}
-
-/* 积分价格 */
-.price {
-  color: #409eff;
-  margin-top: 10px;
-  font-size: 14px;
-}
-
-/* 预览按键 */
+/* 预览按键 (仅保留加载更多使用，卡片内的已移入组件) */
 .btn {
   margin-top: 10px;
   padding: 6px 12px;

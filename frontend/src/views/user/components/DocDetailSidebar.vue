@@ -5,14 +5,14 @@
       <div class="doc-file-info">
         <img src="@/assets/icon/pdf.svg" alt="pdf" class="file-icon" />
         <div class="file-details">
-          <h4>机器学习复习攻略.pdf</h4>
+          <h4>{{ resource?.title || '资源加载中...' }}</h4>
           <span>12.8 MB · 共 45 页</span>
         </div>
       </div>
       
       <div class="points-info">
         <span class="label">下载所需积分</span>
-        <span class="value"><el-icon><Coin /></el-icon> 20</span>
+        <span class="value"><el-icon><Coin /></el-icon> {{ resource?.points || 0 }}</span>
       </div>
       <div class="points-desc">下载后永久免费，支持全平台阅读</div>
       
@@ -76,6 +76,20 @@
 
 <script setup>
 import { Coin, Download } from '@element-plus/icons-vue'
+import { computed } from 'vue'
+import { useResourceStore } from '@/store/resource'
+
+const props = defineProps({
+  resourceId: {
+    type: [String, Number],
+    required: true
+  }
+})
+
+const resourceStore = useResourceStore()
+const resource = computed(() => {
+  return resourceStore.resources.find(r => r.resourceId == props.resourceId)
+})
 </script>
 
 <style scoped>

@@ -4,6 +4,8 @@
  * @module 控制器层
  */
 
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
 const sequelize = require('../config/database');
 const initModels = require('../models/init-models');
 
@@ -19,6 +21,114 @@ const getInternalUid = async (studentId) => {
 
 /**
  * ✅ 管理员：获取所有用户
+ * ✅ 用户注册
+ * POST /api/users/register
+ */
+exports.register = async (req, res) => {
+    try {
+        const { account, password, name, contact, major } = req.body;
+
+        // 1. 基础校验
+        if (!account || !password || !name) {
+            return res.status(400).json({ code: 400, message: '账号、密码和姓名不能为空' });
+        }
+
+        // 2. 检查账号是否已存在
+        const existingUser = await users.findOne({ where: { account } });
+        if (existingUser) {
+            return res.status(400).json({ code: 400, message: '该账号已被注册' });
+        }
+
+        // 3. 密码加密 (加盐哈希)
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        // 4. 创建新用户
+        const newUser = await users.create({
+            account,
+            password: hashedPassword,
+            name,
+            contact,
+            major,
+            points_Balance: 100, // 初始积分
+            role: 'user',
+            account_Status: 'active'
+        });
+
+        res.status(201).json({ code: 201, message: '注册成功' });
+
+    } catch (error) {
+        console.error('注册错误:', error);
+        res.status(500).json({ code: 500, message: '注册失败，服务器错误' });
+    }
+};
+
+/**
+ * ✅ 用户登录 
+ * POST /api/users/login
+ */
+exports.login = async (req, res) => {
+    try {
+        const { account, password } = req.body;
+
+        // 1. 查找用户
+        const user = await users.findOne({ where: { account } });
+        if (!user) {
+            return res.status(401).json({ code: 401, message: '账号或密码错误' });
+        }
+
+        // 2. 校验密码 (尝试 bcrypt 校验，如果失败则尝试明文校验以支持 init_test_users.sql 中的账号)
+        let isMatch = false;
+        try {
+            isMatch = await bcrypt.compare(password, user.password);
+        } catch (e) {
+            // 如果 user.password 不是有效的 bcrypt 哈希，bcrypt.compare 可能会抛错
+            isMatch = false;
+        }
+
+        // 降级处理：为了兼容之前 init_test_users.sql 插入的明文密码
+        if (!isMatch && user.password === password) {
+            isMatch = true;
+        }
+
+        if (!isMatch) {
+            return res.status(401).json({ code: 401, message: '账号或密码错误' });
+        }
+
+        // 3. 检查账号状态
+        if (user.account_Status === 'banned') {
+            return res.status(403).json({ code: 403, message: '该账号已被禁用' });
+        }
+
+        // 4. 生成 JWT Token
+        const token = jwt.sign(
+            { 
+                userId: user.user_ID, 
+                account: user.account, 
+                role: user.role 
+            },
+            process.env.JWT_SECRET || 'AAAcampusSharingSystem',
+            { expiresIn: '24h' }
+        );
+
+        // 返回结果 (排除敏感信息)
+        const { password: _, ...userInfo } = user.toJSON();
+        res.status(200).json({
+            code: 200,
+            message: '登录成功',
+            data: {
+                token,
+                user: userInfo
+            }
+        });
+
+    } catch (error) {
+        console.error('登录错误:', error);
+        res.status(500).json({ code: 500, message: '登录失败，服务器错误' });
+    }
+};
+
+/**
+ * ✅ 管理员：获取所有用户（合并远程功能）
  */
 exports.getUsers = async (req, res) => {
     try {

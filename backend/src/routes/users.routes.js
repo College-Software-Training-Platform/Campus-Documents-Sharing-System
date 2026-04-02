@@ -15,6 +15,19 @@ router.get('/', userController.getUsers);
 /**
  * ✅ 2. 个人资料模块
  */
+const userController = require('../controllers/userController');
+const authMiddleware = require('../middlewares/auth.middleware');
+// 1. 引入你刚刚修改好的资源控制器
+const resourceController = require('../controllers/resourceController');
+
+// --- 公放路由 (无需令牌) ---
+router.post('/login', userController.login);
+router.post('/register', userController.register);
+
+// ✅ 【新增】获取所有用户（管理端）
+router.get('/', userController.getUsers);
+
+// --- 基础资料模块 (部分需要令牌) ---
 router.get('/profile', userController.getUserProfile);
 router.post('/update', userController.updateProfile);
 router.post('/password', userController.changePassword);

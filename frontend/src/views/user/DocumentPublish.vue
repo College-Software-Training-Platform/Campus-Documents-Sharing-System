@@ -1,7 +1,12 @@
 <template>
   <div class="document-publish">
     <div class="publish-header">
-      <h1 class="page-title">发布资源</h1>
+      <div class="title-with-action">
+        <button class="exit-btn" @click="goBack" title="返回发现页">
+          <img src="@/assets/icon/chevron_left.svg" alt="Back" class="icon" />
+        </button>
+        <h1 class="page-title">发布资源</h1>
+      </div>
       <p class="page-subtitle">分享您的知识财富，赚取积分报酬</p>
     </div>
     
@@ -19,8 +24,16 @@
 </template>
 
 <script setup>
+import { useRouter } from 'vue-router'
 import DocPublishMain from './components/DocPublishMain.vue'
 import DocPublishSidebar from './components/DocPublishSidebar.vue'
+
+const router = useRouter()
+
+const goBack = () => {
+  // 跳转到发现页
+  router.push('/user/DiscoverTrend')
+}
 </script>
 
 <style scoped>
@@ -36,23 +49,53 @@ import DocPublishSidebar from './components/DocPublishSidebar.vue'
   margin-bottom: 30px;
 }
 
+.title-with-action {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.exit-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background-color: #fff;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  padding: 0;
+}
+
+.exit-btn:hover {
+  background-color: #f1f5f9;
+}
+
+.exit-btn .icon {
+  width: 20px;
+  height: 20px;
+  filter: grayscale(1);
+  opacity: 0.7;
+}
+
+.exit-btn:hover .icon {
+  opacity: 1;
+}
+
 .page-title {
   font-size: 24px;
   font-weight: 600;
   color: #0f172a;
-  margin: 0 0 8px 0;
+  margin: 0;
 }
 
 .page-subtitle {
   font-size: 14px;
   color: #64748b;
   margin: 0;
-}
-
-/* 适配移动端 */
-@media (max-width: 1200px) {
-  .el-col {
-    margin-bottom: 24px;
-  }
+  padding-left: 48px;
 }
 </style>

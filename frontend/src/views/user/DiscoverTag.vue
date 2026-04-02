@@ -1,15 +1,7 @@
 <template>
   <div class="discover-tag-page">
-    <!-- 二级导航（趋势 / 标签） -->
-    <section class="sub-nav">
-      <button class="sub-tab" @click="goTrend">趋势</button>
-      <button class="sub-tab active">标签</button>
-
-      <div class="view-switch">
-        <button class="switch-btn">▦</button>
-        <button class="switch-btn">☰</button>
-      </div>
-    </section>
+    <!-- 统一二级导航 -->
+    <DiscoverSubNav />
 
     <!-- 知识图谱探索 -->
     <section class="section-block">
@@ -80,6 +72,7 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import DiscoverSubNav from './components/DiscoverSubNav.vue'
 
 const router = useRouter()
 
@@ -104,10 +97,6 @@ const filteredCards = computed(() => {
   return courseCards.filter((item) => item.category === activeCategory.value)
 })
 
-const goTrend = () => {
-  router.push('/user/DiscoverTrend')
-}
-
 const goSearch = () => {
   router.push('/user/SearchResult')
 }
@@ -128,46 +117,9 @@ const goPublish = () => {
 <style scoped>
 .discover-tag-page {
   min-height: calc(100vh - 60px);
-  background: #f5f7fb;
-  padding: 14px 30px 30px;
+  background: #f8fafc;
+  padding: 10px 40px 40px;
   position: relative;
-}
-
-.sub-nav {
-  display: flex;
-  align-items: center;
-  gap: 18px;
-  border-bottom: 1px solid #e7ebf3;
-  padding: 6px 0 10px;
-  margin-bottom: 18px;
-}
-
-.sub-tab {
-  border: none;
-  background: transparent;
-  color: #7c8aa5;
-  cursor: pointer;
-  padding: 8px 2px;
-  font-size: 16px;
-}
-
-.sub-tab.active {
-  color: #409eff;
-  font-weight: 600;
-}
-
-.view-switch {
-  margin-left: auto;
-  display: flex;
-  gap: 8px;
-}
-
-.switch-btn {
-  border: none;
-  background: transparent;
-  color: #8d9cb8;
-  cursor: pointer;
-  font-size: 18px;
 }
 
 .section-block {

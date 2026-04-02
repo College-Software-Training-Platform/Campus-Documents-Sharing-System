@@ -51,7 +51,7 @@
       <div class="divider">或者</div>
 
       <div class="footer-reg">
-        还没有账号？ <a href="#">立即注册</a>
+        还没有账号？ <router-link to="/auth/register">立即注册</router-link>
       </div>
     </div>
 
@@ -64,13 +64,46 @@
 
 <script setup>
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
+import request from '@/utils/request'
 
+const router = useRouter()
 const username = ref('')
 const password = ref('')
 const rememberMe = ref(false)
+const loading = ref(false)
 
-const handleLogin = () => {
-  // 仅前端样式还原，不包含实际逻辑处理
+const handleLogin = async () => {
+  if (!username.value || !password.value) {
+    ElMessage.warning('请输入用户名和密码')
+    return
+  }
+
+  loading.value = true
+  try {
+    const res = await request.post('/users/login', {
+      account: username.value,
+      password: password.value
+    })
+
+    if (res.code === 200) {
+      ElMessage.success('登录成功')
+      
+      // 存储 Token 和用户信息
+      localStorage.setItem('token', res.data.token)
+      localStorage.setItem('user', JSON.stringify(res.data.user))
+      
+      // 如果勾选了“记住我”，可以做一些长效处理 (目前暂时只存 localStorage)
+      
+      // 跳转到首页
+      router.push('/')
+    }
+  } catch (error) {
+    console.error('登录失败:', error)
+  } finally {
+    loading.value = false
+  }
 }
 </script>
 
@@ -128,8 +161,7 @@ const handleLogin = () => {
 }
 
 .custom-input :deep(.el-input__wrapper) {
-  padding: 15px;
-  padding-left: 35px;
+  padding: 12px 15px;
   border-radius: 8px;
   box-shadow: 0 0 0 1px #dcdfe6 inset;
   background-color: #F8FAFC;
@@ -140,7 +172,11 @@ const handleLogin = () => {
 }
 .custom-input :deep(.el-input__inner) {
   font-size: 13px;
-  height: 16px; 
+  height: 24px; 
+}
+.custom-input :deep(.el-input__prefix) {
+  display: flex;
+  align-items: center;
 }
 .custom-input :deep(.el-input__inner::placeholder) {
   color: #94A3B8;
@@ -152,10 +188,9 @@ const handleLogin = () => {
 }
 
 .prefix-icon {
-  position: absolute;
-  left: -20px;
   width: 18px;
   height: 18px;
+  margin-right: 8px;
   pointer-events: none;
 }
 

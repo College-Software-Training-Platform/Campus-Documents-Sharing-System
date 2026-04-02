@@ -1,6 +1,6 @@
 <template>
   <div class="document-detail-page">
-    <div class="breadcrumb">
+    <div class="breadcrumb" @click="goBack">
       <el-icon><ArrowLeft /></el-icon> 返回
     </div>
 
@@ -8,7 +8,7 @@
       <!-- 左侧内容区 -->
       <el-col :span="17">
         <el-card class="content-card" shadow="never">
-          <DocDetailMain />
+          <DocDetailMain :resource-id="$route.query.resourceId" />
           <el-divider />
           <DocDetailComments />
         </el-card>
@@ -16,7 +16,7 @@
 
       <!-- 右侧侧边栏 -->
       <el-col :span="7">
-        <DocDetailSidebar />
+        <DocDetailSidebar :resource-id="$route.query.resourceId" />
       </el-col>
     </el-row>
   </div>
@@ -24,9 +24,15 @@
 
 <script setup>
 import { ArrowLeft } from '@element-plus/icons-vue'
+import { useRouter } from 'vue-router'
 import DocDetailMain from './components/DocDetailMain.vue'
 import DocDetailComments from './components/DocDetailComments.vue'
 import DocDetailSidebar from './components/DocDetailSidebar.vue'
+
+const router = useRouter()
+const goBack = () => {
+  router.back()
+}
 </script>
 
 <style scoped>

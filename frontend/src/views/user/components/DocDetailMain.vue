@@ -3,14 +3,14 @@
     <!-- 标签与标题 -->
     <div class="header-section">
       <div class="tags">
-        <el-tag type="primary" effect="light" class="custom-tag">计算机科学</el-tag>
-        <el-tag type="danger" effect="light" class="custom-tag">热门资源</el-tag>
+        <CommonTag :text="resource?.course || '未分类'" />
+        <CommonTag text="热门资源" />
       </div>
-      <h1 class="doc-title">2024年机器学习期末复习全攻略</h1>
+      <h1 class="doc-title">{{ resource?.title || '资源加载中...' }}</h1>
       <div class="meta-info">
         <span class="meta-item"><el-icon><Calendar /></el-icon> 发布于 2023-12-01</span>
-        <span class="meta-item"><el-icon><View /></el-icon> 1,240 次浏览</span>
-        <span class="meta-item rating"><el-icon color="#f59e0b"><StarFilled /></el-icon> 4.8 <span class="rating-count">(128个评分)</span></span>
+        <span class="meta-item"><el-icon><View /></el-icon> {{ resource?.downloads || 0 }} 次浏览</span>
+        <span class="meta-item rating"><el-icon color="#f59e0b"><StarFilled /></el-icon> {{ resource?.rating || '5.0' }} <span class="rating-count">(128个评分)</span></span>
       </div>
     </div>
 
@@ -23,33 +23,19 @@
       </div>
     </div>
 
-    <!-- AI 摘要 -->
-    <div class="ai-summary">
-      <div class="ai-title">
-        <el-icon><MagicStick /></el-icon> AI 摘要
-      </div>
-      <p class="ai-text">
-        本文档深度覆盖了机器学习核心概念，包括监督学习（回归、分类）、无监督学习（聚类、降维），以及深度学习基础。特别收录了期末考试中常考的算法推导公式与历年名校考题解析，适合在期末前两周进行系统性冲刺备考，帮助你快速掌握考试重难点。
-      </p>
-    </div>
 
-    <!-- 资源详情描述 -->
+    <!-- 摘要 -->
     <div class="detail-description">
-      <h3 class="section-title"><span class="title-indicator"></span> 资源详情描述</h3>
+      <h3 class="section-title"><span class="title-indicator"></span> 摘要</h3>
       <div class="desc-content">
-        <p>本资源由某985高校计科专业学霸整理，整理时间为2023年秋季学期。主要包含以下版块：</p>
-        <ul>
-          <li>重点公式推导： 支持向量机(SVM)、反向传播(BP)、逻辑回归梯度下降。</li>
-          <li>算法对比分析： KNN vs K-means, 随机森林 vs GBDT 的核心差异。</li>
-          <li>核心代码实现： 使用 Python/NumPy 实现基础神经网络的代码片段。</li>
-          <li>模拟卷： 附赠三套模拟试题及详细答案参考。</li>
-        </ul>
+        {{ resource?.description || '暂无摘要' }}
       </div>
       <div class="hash-tags">
-        <el-tag size="small" type="info" class="hash-tag">#机器学习</el-tag>
-        <el-tag size="small" type="info" class="hash-tag">#期末复习</el-tag>
-        <el-tag size="small" type="info" class="hash-tag">#CS</el-tag>
-        <el-tag size="small" type="info" class="hash-tag">#算法</el-tag>
+        <CommonTag 
+          v-for="tag in resource?.tags" 
+          :key="tag" 
+          :text="'#' + tag" 
+        />
       </div>
     </div>
   </div>
@@ -59,6 +45,21 @@
 import { 
   Calendar, View, StarFilled, FullScreen, MagicStick
 } from '@element-plus/icons-vue'
+import { computed } from 'vue'
+import { useResourceStore } from '@/store/resource'
+import CommonTag from './CommonTag.vue'
+
+const props = defineProps({
+  resourceId: {
+    type: [String, Number],
+    required: true
+  }
+})
+
+const resourceStore = useResourceStore()
+const resource = computed(() => {
+  return resourceStore.resources.find(r => r.resourceId == props.resourceId)
+})
 </script>
 
 <style scoped>
