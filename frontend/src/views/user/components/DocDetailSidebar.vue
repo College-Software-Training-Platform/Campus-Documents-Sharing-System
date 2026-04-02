@@ -115,21 +115,6 @@ const handleDownload = async () => {
     // 调用接口获取 blob
     const blob = await downloadResource(props.resourceId)
     
-    // ✅ 预检：如果 blob 很小且类型是 json，说明后端返回的是错误信息而非文件流
-    if (blob.size < 1024 && blob.type === 'application/json') {
-      const reader = new FileReader()
-      reader.onload = () => {
-        try {
-          const errorRes = JSON.parse(reader.result)
-          ElMessage.error(errorRes.message || '下载失败')
-        } catch (e) {
-          ElMessage.error('下载过程发生未知错误')
-        }
-      }
-      reader.readAsText(blob)
-      return
-    }
-
     // 执行文件下载
     const url = window.URL.createObjectURL(new Blob([blob]))
     const link = document.createElement('a')

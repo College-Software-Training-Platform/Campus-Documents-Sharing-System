@@ -33,18 +33,18 @@ const upload = multer({
 
 // 2. 注册路由
 
-// 2.1 静态路径优先匹配 (防止被 :id 拦截)
+// 2.1 统计与趋势查询 (静态路径优先，防止被 :id 拦截)
 router.get('/discover/trend', DiscoverController.getDiscoverTrend);
 router.get('/tags/hot', DiscoverController.getHotTags);
+router.get('/courses', DiscoverController.getCourses); // 统一由 DiscoverController 管理课程列表
 router.get('/search', SearchController.searchResources);
-router.get('/courses', ResourceController.getCourses);
-router.get('/pending', authMiddleware, ResourceController.getPendingResources);
 
-// 2.2 资源核心业务 (上传、下载)
+// 2.2 核心业务 (鉴权)
 router.post('/upload', authMiddleware, upload.single('file'), ResourceController.uploadResource);
 router.post('/download', authMiddleware, ResourceController.downloadResource);
+router.get('/pending', authMiddleware, ResourceController.getPendingResources);
 
-// 2.3 ✅ 详情查询路由 (必须放在最后，因为 :id 会屏蔽后续所有 GET 路由)
+// 2.3 详情查询 (必须放在最后，防止屏蔽上述所有 GET 路由)
 router.get('/:id', ResourceController.getResourceDetail);
 
 module.exports = router;

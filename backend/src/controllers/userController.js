@@ -132,6 +132,8 @@ exports.login = async (req, res) => {
 
 /**
  * ✅ 管理员：获取所有用户（合并远程功能）
+/**
+ * ✅ 管理员：获取所有用户
  */
 exports.getUsers = async (req, res) => {
     try {
@@ -332,3 +334,44 @@ exports.getPointDetails = async (req, res) => {
         res.status(500).json({ code: 500, message: '获取积分失败' });
     }
 };
+
+exports.deleteUser = async (req, res) => {
+  try {
+    const id = req.params.id;
+
+    const result = await User.destroy({
+      where: { id }
+    });
+
+    if (result === 0) {
+      return res.status(404).json({ message: '用户不存在' });
+    }
+
+    res.json({ message: '删除成功' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.banUser = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const user = await users.findByPk(id);
+        if (!user) {
+            return res.status(404).json({ code: 404, message: '用户不存在' });
+        }
+
+        await users.update(
+            { account_Status: 'banned' },
+            { where: { user_ID: id } }
+        );
+
+        res.status(200).json({ code: 200, message: '已封禁用户' });
+
+    } catch (err) {
+        console.error('封禁用户失败:', err);
+        res.status(500).json({ code: 500, message: '封禁失败' });
+    }
+};
+

@@ -198,9 +198,9 @@ module.exports = {
     downloadResource,
     uploadResource,
     getDiscoverTrend,
+    getResourceDetail,
     getPendingResources,
     approveResource,
     rejectResource,
-    getResourceDetail, // 导出详情接口
     getCourses
 };
