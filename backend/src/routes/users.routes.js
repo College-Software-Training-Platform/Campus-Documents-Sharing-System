@@ -2,7 +2,13 @@ const express = require('express');
 const router = express.Router();
 const userController = require('../controllers/userController');
 
-// 定义：当收到 PUT 请求访问 /update 时，去找 controller 里的更新函数
-router.put('/update', userController.updateProfile);
+// 获取资料
+router.get('/profile', userController.getUserProfile);
+// 修改资料 
+router.post('/update', userController.updateProfile);
+// 修改密码
+router.post('/password', userController.changePassword);
+// 获取统计
+router.get('/stats', userController.getUserStats);
 
 module.exports = router;

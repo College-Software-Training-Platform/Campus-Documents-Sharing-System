@@ -9,114 +9,125 @@
  * 4. [扩展] getUserStats: 获取用户相关的简单统计数据 (如上传数、下载数)
  */
 
-const users = require('../models/users.js'); 
-const resources = require('../models/resources.js');
-const download_records = require('../models/download_records.js');
-// 注意：确保你的 models 路径正确，且 users 模型已包含 bio, major, avatar_url 字段
+// 1. 引入数据库实例 (注意：这里直接引入，不加 {}，且路径指向 database.js)
+const sequelize = require('../config/database'); 
+const initModels = require('../models/init-models');
+
+// 2. 初始化所有模型
+const models = initModels(sequelize);
+const { users, resources, download_records } = models;
 
 /**
  * 1. 获取用户详细资料
- * 对应路由：GET /api/user/profile
+ * 对应路由：GET /api/users/profile
  */
 exports.getUserProfile = async (req, res) => {
     try {
-        // 实际开发中，userId 应该从 JWT Token 中解析出来，这里先演示从 query 获取
         const { studentId } = req.query; 
 
         if (!studentId) {
-            return res.status(400).json({ code: 400, message: '缺少学生标识' });
+            return res.status(400).json({ code: 400, message: '缺少参数：studentId' });
         }
 
-        const user = await users.findOne({ where: { student_id: studentId } });
+        // --- 核心修改：使用 account 字段匹配你的数据库 ---
+        const user = await users.findOne({ 
+            where: { account: studentId } 
+        });
 
         if (!user) {
-            return res.status(404).json({ code: 404, message: '用户不存在' });
+            return res.status(404).json({ 
+                code: 404, 
+                message: `未找到学号为 ${studentId} 的用户，请检查数据库 account 字段` 
+            });
         }
 
-        // 过滤敏感信息（如密码）后再返回
+        // 过滤掉密码等敏感信息
         const { password, ...safeData } = user.toJSON();
         res.status(200).json({ code: 200, data: safeData });
+
     } catch (error) {
-        console.error('获取资料失败:', error);
-        res.status(500).json({ code: 500, message: '服务器内部错误' });
+        console.error('❌ 获取资料失败:', error);
+        res.status(500).json({ 
+            code: 500, 
+            message: "服务器内部错误", 
+            debug: error.message 
+        });
     }
 };
 
 /**
  * 2. 修改用户基本资料
- * 对应路由：POST /api/user/update
+ * 对应路由：POST /api/users/update
  */
 exports.updateProfile = async (req, res) => {
     try {
         const { studentId, nickname, bio, major } = req.body;
 
-        // 数据合法性简单校验
-        if (!nickname || nickname.length > 20) {
-            return res.status(400).json({ code: 400, message: '昵称不能为空且长度需小于20' });
+        if (!studentId) {
+            return res.status(400).json({ code: 400, message: '缺少学号标识' });
         }
 
+        // 注意：根据截图，你的昵称字段可能叫 name
         const [affectedRows] = await users.update(
-            { nickname, bio, major },
-            { where: { student_id: studentId } }
+            { name: nickname, bio, major }, 
+            { where: { account: studentId } }
         );
 
         if (affectedRows > 0) {
             res.status(200).json({ code: 200, message: '个人资料已更新' });
         } else {
-            res.status(404).json({ code: 404, message: '更新失败，未找到对应记录' });
+            res.status(404).json({ code: 404, message: '更新失败，可能用户不存在或数据无变化' });
         }
     } catch (error) {
-        console.error('更新资料失败:', error);
-        res.status(500).json({ code: 500, message: '更新失败，请稍后再试' });
+        console.error('❌ 更新资料失败:', error);
+        res.status(500).json({ code: 500, message: '更新失败', debug: error.message });
     }
 };
 
 /**
  * 3. 修改登录密码
- * 对应路由：POST /api/user/password
+ * 对应路由：POST /api/users/password
  */
 exports.changePassword = async (req, res) => {
     try {
         const { studentId, oldPassword, newPassword } = req.body;
 
-        // 1. 查找用户
-        const user = await users.findOne({ where: { student_id: studentId } });
+        const user = await users.findOne({ where: { account: studentId } });
         
-        // 2. 校验旧密码 (此处为演示，实际建议使用 bcrypt.compare 进行哈希比对)
-        if (user.password !== oldPassword) {
-            return res.status(400).json({ code: 400, message: '原密码输入错误' });
+        if (!user || user.password !== oldPassword) {
+            return res.status(400).json({ code: 400, message: '原密码错误' });
         }
 
-        // 3. 更新新密码
         await users.update(
             { password: newPassword },
-            { where: { student_id: studentId } }
+            { where: { account: studentId } }
         );
 
-        res.status(200).json({ code: 200, message: '密码修改成功，请妥善保管' });
+        res.status(200).json({ code: 200, message: '密码修改成功' });
     } catch (error) {
-        console.error('修改密码失败:', error);
-        res.status(500).json({ code: 500, message: '系统繁忙，请稍后再试' });
+        console.error('❌ 修改密码失败:', error);
+        res.status(500).json({ code: 500, message: '系统繁忙' });
     }
 };
 
 /**
- * 4. 获取用户统计信息 (配合前端 Profile 页面的 Badge/统计项)
- * 对应路由：GET /api/user/stats
+ * 4. 获取用户统计信息
+ * 对应路由：GET /api/users/stats
  */
 exports.getUserStats = async (req, res) => {
     try {
-        const { userId } = req.query;
+        const { userId } = req.query; // 这里的 userId 对应数据库里的 user_ID (数字)
 
-        // 演示：同时查询用户上传的资源数和下载记录数
-        const uploadCount = await resources.count({ where: { uploader_id: userId } });
-        const downloadCount = await download_records.count({ where: { user_id: userId } });
+        // 注意：这里的字段名 uploader_ID 和 user_ID 需与 Navicat 表头严格一致
+        const uploadCount = await resources.count({ where: { uploader_ID: userId } });
+        const downloadCount = await download_records.count({ where: { user_ID: userId } });
 
         res.status(200).json({ 
             code: 200, 
             data: { uploadCount, downloadCount } 
         });
     } catch (error) {
-        res.status(500).json({ code: 500, message: '统计数据获取失败' });
+        console.error('❌ 统计失败:', error);
+        res.status(500).json({ code: 500, message: '统计获取失败' });
     }
 };

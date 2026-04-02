@@ -22,7 +22,7 @@ const aiRoute = require('./routes/aiRoute');
 app.use('/api/ai', aiRoute);
 
 // 其他路由注册 (待实现)
-// app.use('/api/users', require('./routes/user.routes'));
+ app.use('/api/users', require('./routes/users.routes'));
 // app.use('/api/resources', require('./routes/resource.routes'));
 
 app.listen(PORT, () => {

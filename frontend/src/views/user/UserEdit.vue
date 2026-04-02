@@ -57,106 +57,90 @@
 </template>
 
 <script setup>
-import { reactive, ref } from 'vue'
+import { reactive, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Plus } from '@element-plus/icons-vue' // 必须引入 Plus 图标
+import { Plus } from '@element-plus/icons-vue'
+import axios from 'axios'
 
 const router = useRouter()
 const submitting = ref(false)
+const defaultAvatar = 'https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png'
+const imageUrl = ref('')
 
-// 预览图片路径
-const imageUrl = ref('https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png')
+// 固定测试学号（后期可改为从 localStorage 获取）
+const targetStudentId = '2024214283'
 
 const editForm = reactive({
-  nickname: '重邮学生',
-  bio: '计科专业 | 考研党',
-  major: 'CS',
-  avatarUrl: '' // 存储后端返回的地址
+  nickname: '',
+  bio: '',
+  major: '',
+  avatarUrl: '',
+  studentId: targetStudentId // 必须传给后端
 })
 
-// 上传前校验
+// --- 1. 进页面先获取当前资料，填充表单 ---
+const fetchCurrentData = async () => {
+  try {
+    const res = await axios.get('http://localhost:3000/api/users/profile', {
+      params: { studentId: targetStudentId }
+    })
+    if (res.data.code === 200) {
+      const data = res.data.data
+      editForm.nickname = data.name    // 注意：后端字段是 name
+      editForm.bio = data.bio
+      editForm.major = data.major
+      editForm.avatarUrl = data.avatar_Url
+      imageUrl.value = data.avatar_Url || defaultAvatar
+    }
+  } catch (error) {
+    ElMessage.error('无法加载当前资料')
+  }
+}
+
+onMounted(fetchCurrentData)
+
+// --- 2. 上传头像逻辑 ---
 const beforeAvatarUpload = (rawFile) => {
   const isTypeValid = ['image/jpeg', 'image/png'].includes(rawFile.type)
   const isLt2M = rawFile.size / 1024 / 1024 < 2
-
-  if (!isTypeValid) {
-    ElMessage.error('头像只能是 JPG 或 PNG 格式!')
-    return false
-  }
-  if (!isLt2M) {
-    ElMessage.error('头像大小不能超过 2MB!')
-    return false
-  }
-  return true
+  if (!isTypeValid) ElMessage.error('头像只能是 JPG 或 PNG 格式!')
+  if (!isLt2M) ElMessage.error('头像大小不能超过 2MB!')
+  return isTypeValid && isLt2M
 }
 
-// 上传成功回调
-const handleAvatarSuccess = (response, uploadFile) => {
-  // 模拟：通常这里会拿 response.url
-  imageUrl.value = URL.createObjectURL(uploadFile.raw)
-  editForm.avatarUrl = response.url || '' 
+const handleAvatarSuccess = (response) => {
+  // 假设后端上传接口返回 { code: 200, url: 'http://...' }
+  imageUrl.value = response.url 
+  editForm.avatarUrl = response.url 
   ElMessage.success('头像上传成功')
 }
 
-const handleSave = () => {
+// --- 3. 提交修改到后端 ---
+const handleSave = async () => {
+  if (!editForm.nickname) return ElMessage.warning('昵称不能为空')
+  
   submitting.value = true
-  // 这里你应该调用后端 API，例如 axios.post('/api/user/update', editForm)
-  setTimeout(() => {
+  try {
+    // 对应你后端 userController.js 中的 updateProfile 函数
+    const res = await axios.post('http://localhost:3000/api/users/update', {
+      studentId: editForm.studentId,
+      nickname: editForm.nickname,
+      bio: editForm.bio,
+      major: editForm.major
+    })
+
+    if (res.data.code === 200) {
+      ElMessage.success('个人资料已更新')
+      router.push('/user/Profile') // 跳回详情页，触发详情页重新加载
+    } else {
+      ElMessage.error(res.data.message || '更新失败')
+    }
+  } catch (error) {
+    console.error('更新报错:', error)
+    ElMessage.error('系统繁忙，请稍后再试')
+  } finally {
     submitting.value = false
-    ElMessage.success('个人资料已更新')
-    router.push('/user/Profile')
-  }, 800)
+  }
 }
 </script>
-
-<style scoped>
-.edit-container {
-  max-width: 600px;
-  margin: 50px auto;
-  padding: 0 20px;
-}
-.edit-card {
-  border-radius: 12px;
-}
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-.card-header .title {
-  font-weight: bold;
-  font-size: 18px;
-}
-
-/* 头像上传组件专属样式 */
-.avatar-uploader {
-  border: 1px dashed #d9d9d9;
-  border-radius: 50%; /* 圆形边框 */
-  cursor: pointer;
-  position: relative;
-  overflow: hidden;
-  width: 100px;
-  height: 100px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  transition: border-color 0.3s;
-}
-
-.avatar-uploader:hover {
-  border-color: #409eff;
-}
-
-.avatar-uploader-icon {
-  font-size: 28px;
-  color: #8c939d;
-}
-
-.avatar-preview {
-  width: 100px;
-  height: 100px;
-  display: block;
-  object-fit: cover;
-}
-</style>
