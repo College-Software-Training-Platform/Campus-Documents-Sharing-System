@@ -1,9 +1,7 @@
 <template>
   <div class="discover-tag-page">
-    <!-- 统一二级导航 -->
     <DiscoverSubNav />
 
-    <!-- 知识图谱探索 -->
     <section class="section-block">
       <div class="section-head">
         <div>
@@ -18,7 +16,7 @@
           v-for="item in categoryList"
           :key="item"
           :class="['chip', { active: activeCategory === item }]"
-          @click="activeCategory = item"
+          @click="handleCategoryClick(item)"
         >
           {{ item }}
         </button>
@@ -29,10 +27,10 @@
           v-for="card in filteredCards"
           :key="card.code"
           class="course-card"
-          @click="goSearchByCategory(card.category)"
+          @click="goSearchByKeyword(card.name)"
         >
           <div class="card-top">
-            <span class="icon-box">{{ card.icon }}</span>
+            <span class="icon-box">📘</span>
             <span class="meta">{{ card.count }} 资源</span>
           </div>
 
@@ -40,18 +38,17 @@
           <p>{{ card.name }}</p>
 
           <div class="tags">
-            <span v-for="tag in card.tags" :key="tag" class="tag">{{ tag }}</span>
+            <span class="tag">{{ card.category }}</span>
           </div>
         </article>
       </div>
     </section>
 
-    <!-- 热门研究标签 -->
     <section class="hot-tag-block">
       <div class="hot-title">✨ 热门研究标签</div>
       <div class="hot-tag-list">
         <button
-          v-for="tag in hotTags"
+          v-for="tag in hotTagLabels"
           :key="tag"
           class="hot-tag-item"
           @click="goSearchByKeyword(tag.replace('#', ''))"
@@ -62,7 +59,6 @@
       </div>
     </section>
 
-    <!-- 右下角发布按钮 -->
     <button class="publish-fab" @click="goPublish" title="发布资料">
       +
     </button>
@@ -70,39 +66,61 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import DiscoverSubNav from './components/DiscoverSubNav.vue'
+import { useResourceStore } from '@/store/resource'
 
 const router = useRouter()
+const resourceStore = useResourceStore()
 
-const categoryList = ['所有系部', '计算机科学', '经济学', '工程学', '物理学', '数学', '生物学']
 const activeCategory = ref('所有系部')
 
-const courseCards = [
-  { code: 'CS101', name: '算法与数据结构导论', category: '计算机科学', icon: '🖥️', count: 124, tags: ['Python', 'Big O', 'Sorting'] },
-  { code: 'ENG202', name: '经典文学批评方法', category: '工程学', icon: '📐', count: 124, tags: ['Entropy', 'Flow'] },
-  { code: 'MATH305', name: '线性代数与复变函数', category: '数学', icon: 'Σ', count: 124, tags: ['Matrices', 'Eigen'] },
-  { code: 'PHYS102', name: '电磁学与波动光学', category: '物理学', icon: '🧪', count: 124, tags: ['Maxwell', 'Optics'] },
-  { code: 'ECON101', name: '微观经济理论与政策', category: '经济学', icon: '💰', count: 124, tags: ['Supply', 'Market'] },
-  { code: 'AI Lab', name: '机器学习与神经网络研究', category: '计算机科学', icon: '🧠', count: 124, tags: ['Deep Learning', 'NLP'] },
-  { code: 'DM404', name: '交互界面设计与 UX 原则', category: '工程学', icon: '🎨', count: 124, tags: ['UI/UX', 'Design'] },
-  { code: 'BIO220', name: '细胞生物学与分子遗传学', category: '生物学', icon: '🧬', count: 124, tags: ['DNA', 'Protein'] }
-]
+const collegeList = computed(() => {
+  const colleges = (resourceStore.courses.data || []).map((c) => c.college).filter(Boolean)
+  return Array.from(new Set(colleges))
+})
 
-const hotTags = ['#NLP', '#Quantum', '#FinTech', '#Ecology', '#Ethics', '#Robotics']
+const categoryList = computed(() => ['所有系部', ...collegeList.value])
+
+const courseCards = computed(() => {
+  return (resourceStore.courses.data || []).map((item) => ({
+    code: `COURSE-${item.course_ID}`,
+    name: item.course_Name,
+    category: item.college,
+    count: item.resourceCount || 0
+  }))
+})
 
 const filteredCards = computed(() => {
-  if (activeCategory.value === '所有系部') return courseCards
-  return courseCards.filter((item) => item.category === activeCategory.value)
+  if (activeCategory.value === '所有系部') return courseCards.value
+  return courseCards.value.filter((item) => item.category === activeCategory.value)
+})
+
+const hotTagLabels = computed(() => {
+  const serverTags = resourceStore.hotTags.data || []
+  if (serverTags.length) {
+    return serverTags.map((t) => `#${t.tagName}`)
+  }
+  return ['#NLP', '#Quantum', '#FinTech', '#Ecology', '#Ethics', '#Robotics']
+})
+
+onMounted(async () => {
+  await Promise.all([
+    resourceStore.fetchCourses(),
+    resourceStore.fetchHotTags(6)
+  ])
 })
 
 const goSearch = () => {
   router.push('/user/SearchResult')
 }
 
-const goSearchByCategory = (category) => {
-  router.push({ path: '/user/SearchResult', query: { q: category } })
+const handleCategoryClick = (category) => {
+  activeCategory.value = category
+  if (category === '所有系部') {
+    goSearch()
+  }
 }
 
 const goSearchByKeyword = (keyword) => {
