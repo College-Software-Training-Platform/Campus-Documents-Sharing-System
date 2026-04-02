@@ -26,7 +26,12 @@ exports.getDiscoverTrend = async (req, res) => {
     const limit = Math.max(parseInt(req.query.limit, 10) || 10, 1);
     const offset = (page - 1) * limit;
 
-    const where = { audit_Status: 'approved' };
+    const where = { 
+      [Op.or]: [
+        { audit_Status: 'approved' },
+        { audit_Status: 'pending' }
+      ]
+    };
     if (format !== 'all') {
       where.format = format;
     }
@@ -129,12 +134,12 @@ exports.getHotTags = async (req, res) => {
       attributes: [
         'tag_ID',
         'tag_Name',
-        [sequelize.fn('COUNT', sequelize.col('resource_ID_resources.resource_ID')), 'count']
+        [sequelize.fn('COUNT', sequelize.col('resources.resource_ID')), 'count']
       ],
       include: [
         {
           model: resources,
-          as: 'resource_ID_resources',
+          as: 'resources',
           attributes: [],
           through: { attributes: [] },
           where: { audit_Status: 'approved' },

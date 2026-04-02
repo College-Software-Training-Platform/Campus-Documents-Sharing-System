@@ -16,7 +16,7 @@ export const getAISummary = (resourceId) => {
  */
 export const getDiscoverTrend = (params) => {
   return request({
-    url: '/resources/trend',
+    url: '/resources/discover/trend',
     method: 'get',
     params
   });
