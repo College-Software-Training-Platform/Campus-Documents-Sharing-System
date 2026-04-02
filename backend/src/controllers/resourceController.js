@@ -18,7 +18,7 @@ const ResourceModel = require('../models/resources')(sequelize, Sequelize.DataTy
 // 获取待审核资源
 const getPendingResources = async () => {
   try {
-    const resources = await ResourceModel.findAll({ where: { status: 'pending' } });
+    const resources = await ResourceModel.findAll({ where: { audit_Status: 'pending' } });
     console.log('待审核资源:', resources.map(r => r.toJSON()));
   } catch (err) {
     console.error(err);

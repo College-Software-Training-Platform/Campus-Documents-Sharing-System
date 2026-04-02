@@ -35,12 +35,20 @@
     </el-card>
 
     <el-tabs v-model="activeTab" class="profile-tabs" type="border-card">
-      <el-tab-pane label="我的资料库" name="resources">
-        <MyResources />
+      <el-tab-pane label="我的上传" name="uploads">
+        <MyUploads v-if="userInfo.userId" :userId="userInfo.userId" />
       </el-tab-pane>
       
+      <el-tab-pane label="我的下载" name="downloads">
+        <MyDownloads v-if="userInfo.userId" :userId="userInfo.userId" />
+      </el-tab-pane>
+
+      <el-tab-pane label="我的收藏" name="favorites">
+        <MyFavorites v-if="userInfo.userId" :userId="userInfo.userId" />
+      </el-tab-pane>
+
       <el-tab-pane label="积分明细" name="points">
-        <PointDetails />
+        <PointDetails v-if="userInfo.userId" :userId="userInfo.userId" />
       </el-tab-pane>
 
       <el-tab-pane label="安全设置" name="security">
@@ -53,11 +61,15 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import axios from 'axios'
-import MyResources from './components/MyResources.vue'
-import PointDetails from './components/PointDetails.vue'
+
+// 修正引入名称，保持一致
+import MyUploads from './components/MyUploads.vue' 
+import MyDownloads from './components/MyDownloads.vue' 
+import MyFavorites from './components/MyFavorites.vue' 
+import PointDetails from './components/PointDetails.vue' 
 import SecuritySettings from './components/SecuritySettings.vue'
 
-const activeTab = ref('resources')
+const activeTab = ref('uploads')
 const defaultAvatar = 'https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png'
 
 const userInfo = ref({
@@ -73,6 +85,7 @@ const userInfo = ref({
 
 const fetchUserData = async () => {
   try {
+    // 后期建议从登录 token 或 localStorage 中动态获取
     const targetStudentId = '2024214283' 
     
     // 1. 获取基础资料
@@ -82,14 +95,16 @@ const fetchUserData = async () => {
 
     if (profileRes.data.code === 200) {
       const data = profileRes.data.data
+      
+      // 更新个人资料
       userInfo.value.nickname = data.name || '未设置昵称'
       userInfo.value.bio = data.bio || '这位同学很懒，什么都没写'
       userInfo.value.studentId = data.account
       userInfo.value.points = data.points_Balance
       userInfo.value.avatarUrl = data.avatar_Url
-      userInfo.value.userId = data.user_ID
+      userInfo.value.userId = data.user_ID // 这里的 ID 变化会触发 v-if 的组件加载
 
-      // 2. 获取统计数据 (调用你后端写好的统计接口)
+      // 2. 获取统计数据
       const statsRes = await axios.get(`http://localhost:3000/api/users/stats`, {
         params: { userId: data.user_ID }
       })
@@ -99,7 +114,7 @@ const fetchUserData = async () => {
       }
     }
   } catch (error) {
-    console.error('数据加载失败:', error)
+    console.error('Profile 数据加载失败:', error)
   }
 }
 
@@ -158,7 +173,6 @@ onMounted(() => {
   margin: 10px 0 20px 0;
 }
 
-/* 统计数据布局 */
 .data-stats {
   display: flex;
   align-items: center;
@@ -194,12 +208,17 @@ onMounted(() => {
 
 .profile-tabs { 
   border-radius: 16px; 
-  min-height: 500px; 
+  min-height: 550px; 
   overflow: hidden;
   box-shadow: 0 4px 20px rgba(0,0,0,0.05);
 }
 
 :deep(.el-tabs--border-card) {
   border: none;
+}
+
+:deep(.el-tabs__item) {
+  padding: 0 25px !important;
+  font-weight: 500;
 }
 </style>
