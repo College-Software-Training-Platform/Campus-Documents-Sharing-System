@@ -136,6 +136,7 @@ const rejectResource = async (resourceId) => {
     }
 };
 
+<<<<<<< Updated upstream
 
 // 审核资源（统一处理通过 / 驳回）
 const auditResource = async (req, res) => {
@@ -172,4 +173,85 @@ module.exports = {
     downloadResource,
     getPendingResources,
     auditResource   
+=======
+/**
+ * ✅ 核心逻辑：上传资源并处理课程、标签关联
+ */
+const uploadResource = async (req, res) => {
+    let t;
+    try {
+        const { title, courseName, tags, points, description } = req.body;
+        const uploader_ID = req.user.userId; // 从 JWT 中间件获取
+
+        if (!req.file) {
+            return res.status(400).json({ code: 400, message: '未检测到上传文件' });
+        }
+
+        // 开启事务
+        t = await sequelize.transaction();
+
+        // 1. 处理课程 (Find or Create)
+        const [course] = await models.courses.findOrCreate({
+            where: { course_Name: courseName },
+            transaction: t
+        });
+
+        // 2. 创建资源记录
+        const newResource = await resources.create({
+            title: title,
+            uploader_ID: uploader_ID,
+            course_ID: course.course_ID,
+            file_Path: req.file.path.replace(/\\/g, '/'), // 统一路径分隔符
+            format: path.extname(req.file.originalname).substring(1).toLowerCase(),
+            file_Size: req.file.size,
+            required_Points: points || 0,
+            description: description,
+            audit_Status: 'pending', // 默认待审核
+            upload_Time: new Date(),
+            download_Count: 0
+        }, { transaction: t });
+
+        // 3. 处理标签
+        if (tags) {
+            // 支持前端传数组或逗号分隔字符串
+            const tagList = Array.isArray(tags) ? tags : tags.split(',').map(s => s.trim()).filter(Boolean);
+            
+            for (const tagName of tagList) {
+                const [tagRecord] = await models.tags.findOrCreate({
+                    where: { tag_Name: tagName },
+                    transaction: t
+                });
+                
+                await models.resource_tag_map.create({
+                    resource_ID: newResource.resource_ID,
+                    tag_ID: tagRecord.tag_ID
+                }, { transaction: t });
+            }
+        }
+
+        await t.commit();
+        res.status(201).json({ 
+            code: 201, 
+            message: '资源发布成功，请等待审核', 
+            data: { resourceId: newResource.resource_ID } 
+        });
+
+    } catch (err) {
+        if (t) await t.rollback();
+        // 如果失败，尝试删除已上传的物理文件
+        if (req.file && fs.existsSync(req.file.path)) {
+            fs.unlinkSync(req.file.path);
+        }
+        console.error('❌ 上传失败:', err);
+        res.status(500).json({ code: 500, message: '服务器内部错误，上传失败' });
+    }
+};
+
+module.exports = {
+    downloadResource,
+    getPendingResources,
+    approveResource,
+    rejectResource,
+    uploadResource
+>>>>>>> Stashed changes
 };
