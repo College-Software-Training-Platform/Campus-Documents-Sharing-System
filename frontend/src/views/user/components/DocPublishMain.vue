@@ -115,7 +115,7 @@
       <!-- 底部按钮 -->
       <div class="form-actions">
         <el-button size="large" class="cancel-btn">取消</el-button>
-        <el-button type="primary" size="large" class="submit-btn" :icon="Position">
+        <el-button type="primary" size="large" class="submit-btn" :icon="Position" @click="handleSubmit">
           立即发布
         </el-button>
       </div>
@@ -128,7 +128,11 @@ import { ref, reactive } from 'vue'
 import { UploadFilled, MagicStick, Position } from '@element-plus/icons-vue'
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
+import { useResourceStore } from '@/store/resource'
+import { useRouter } from 'vue-router'
 
+const resourceStore = useResourceStore()
+const router = useRouter()
 const aiLoading = ref(false)
 
 const publishForm = reactive({
@@ -170,8 +174,6 @@ const generateAISummary = async () => {
     if (response.data.success) {
       publishForm.description = response.data.summary
       ElMessage.success('摘要已成功生成')
-    } else {
-      ElMessage.error(response.data.message || '生成摘要时遇到一点小问题')
     }
   } catch (error) {
     console.error('AI Summary Error:', error)
@@ -179,6 +181,40 @@ const generateAISummary = async () => {
     ElMessage.error(errorMsg)
   } finally {
     aiLoading.value = false
+  }
+}
+
+const handleSubmit = () => {
+  // 1. 基础校验
+  if (!publishForm.title.trim()) {
+    ElMessage.warning('请输入资源标题')
+    return
+  }
+  if (!publishForm.agreement) {
+    ElMessage.warning('请阅读并勾选服务协议')
+    return
+  }
+
+  // 2. 构造数据对象
+  const newResource = {
+    title: publishForm.title,
+    course: publishForm.category === 'cs' ? '计算机科学' : (publishForm.category === 'math' ? '高等数学' : '未分类'),
+    format: 'pdf', // 暂时固定，等文件上传实现后再动态获取
+    points: publishForm.points,
+    tags: [...publishForm.tags],
+    description: publishForm.description
+  }
+
+  // 3. 调用 Store 新增资源
+  try {
+    resourceStore.addResource(newResource)
+    ElMessage.success('资源发布成功！')
+    
+    // 4. 跳转到发现页
+    router.push('/user/DiscoverTrend')
+  } catch (error) {
+    ElMessage.error('发布失败，请稍后重试')
+    console.error('Publish Error:', error)
   }
 }
 </script>
