@@ -121,7 +121,7 @@ exports.getMyDownloads = async (req, res) => {
             include: [{
                 model: resources,
                 as: 'resource', 
-                attributes: ['title', 'format'] // 改为 format，对应你 resources 表的字段
+                attributes: ['title', 'format', 'download_Count'] // 这里也顺便带出总下载数
             }],
             order: [['download_Time', 'DESC']]
         });
@@ -129,15 +129,15 @@ exports.getMyDownloads = async (req, res) => {
         const data = records.map(r => ({
             record_ID: r.record_ID,
             title: r.resource ? r.resource.title : '资源已失效',
-            format: r.resource ? r.resource.format : '-', // 统一为 format
-            deducted_Points: r.deducted_Points, // 这里的字段名必须和你数据库 download_records 表一致
+            format: r.resource ? r.resource.format : '-',
+            // 确保这里返回的是负数，前端显示更直观
+            deducted_Points: `-${r.deducted_Points || 5} 积分`, 
             download_Time: r.download_Time
         }));
 
         res.status(200).json({ code: 200, data });
     } catch (error) {
-        console.error("后端错误详情:", error); // 打印到黑窗口，方便你调试 500 错误
-        res.status(500).json({ code: 500, message: '获取下载记录失败', debug: error.message });
+        res.status(500).json({ code: 500, message: '获取下载记录失败' });
     }
 };
 
