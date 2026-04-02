@@ -30,7 +30,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import axios from 'axios'
+import request from '@/utils/request'
 
 const props = defineProps({
   userId: [Number, String]
@@ -47,11 +47,11 @@ const formatDate = (dateStr) => {
 const fetchDownloads = async () => {
   loading.value = true
   try {
-    const res = await axios.get('http://localhost:3000/api/users/downloads', {
+    const res = await request.get('/users/downloads', {
       params: { userId: props.userId }
     })
-    if (res.data.code === 200) {
-      list.value = res.data.data
+    if (res.code === 200) {
+      list.value = res.data
     }
   } catch (error) {
     console.error('获取下载记录失败:', error)

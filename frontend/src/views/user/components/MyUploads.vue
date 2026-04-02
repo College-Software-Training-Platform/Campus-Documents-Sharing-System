@@ -36,7 +36,7 @@
 
 <script setup>
 import { ref, watch } from 'vue'
-import axios from 'axios'
+import request from '@/utils/request'
 import { ElMessage } from 'element-plus'
 
 const props = defineProps({
@@ -58,12 +58,12 @@ const fetchData = async () => {
   
   loading.value = true
   try {
-    const res = await axios.get('http://localhost:3000/api/users/resources', {
+    const res = await request.get('/users/resources', {
       params: { userId: props.userId }
     })
     
-    if (res.data.code === 200) {
-      list.value = Array.isArray(res.data.data) ? res.data.data : []
+    if (res.code === 200) {
+      list.value = Array.isArray(res.data) ? res.data : []
     }
   } catch (error) {
     console.error('获取列表失败:', error)
@@ -85,8 +85,7 @@ const handleDownload = async (row) => {
   try {
     // 1. 调用后端下载动作接口
     // 注意：必须设置 responseType 为 'blob' 才能接收文件流
-    const response = await axios.post('http://localhost:3000/api/users/download-action', {
-      userId: props.userId,
+    const response = await request.post('/users/download-action', {
       resourceId: row.resource_ID
     }, { 
       responseType: 'blob' 
