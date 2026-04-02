@@ -16,7 +16,7 @@ app.get('/', (req, res) => {
 });
 
 // 注册路由模块 (待实现)
-// app.use('/api/users', require('./routes/user.routes'));
+ app.use('/api/users', require('./routes/users.routes'));
 // app.use('/api/resources', require('./routes/resource.routes'));
 
 app.listen(PORT, () => {
