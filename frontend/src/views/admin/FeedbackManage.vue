@@ -1,18 +1,11 @@
 <template>
-    <!-- 管理端-用户反馈页 -->
   <div class="feedback-manage">
     <h2>用户反馈管理</h2>
 
-    <!-- 搜索栏 -->
+    <!-- 搜索 -->
     <div class="toolbar">
-      <el-input
-        v-model="keyword"
-        placeholder="搜索反馈内容"
-        style="width: 200px"
-      />
-      <el-button type="primary" @click="handleSearch">
-        搜索
-      </el-button>
+      <el-input v-model="keyword" placeholder="搜索反馈内容" style="width: 200px" />
+      <el-button type="primary" @click="handleSearch">搜索</el-button>
     </div>
 
     <!-- 表格 -->
@@ -56,52 +49,76 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import axios from 'axios'
 import { ElMessage } from 'element-plus'
 
 const feedbackList = ref([])
 const total = ref(0)
 const keyword = ref('')
 
-// 模拟数据（后面换接口）
-const fetchFeedbacks = () => {
-  feedbackList.value = [
-    {
-      id: 1,
-      username: 'user1',
-      content: '这个资源打不开',
-      status: '未处理'
-    },
-    {
-      id: 2,
-      username: 'user2',
-      content: '希望增加更多课程资料',
-      status: '已处理'
-    }
-  ]
-  total.value = 2
+// ✅ 获取反馈（连接后端）
+const fetchFeedbacks = async () => {
+  try {
+    const res = await axios.get('http://localhost:3000/api/feedbacks')
+
+    // ⚠️ 映射字段（根据你数据库来）
+    feedbackList.value = res.data.map(item => ({
+      id: item.feedback_ID,
+      username: item.user_ID,     // 或用户名字段
+      content: item.content,
+      status: item.status === 'processed' ? '已处理' : '未处理'
+    }))
+
+    total.value = feedbackList.value.length
+
+  } catch (err) {
+    console.error(err)
+    ElMessage.error('获取反馈失败')
+  }
 }
 
-// 搜索
+// 🔍 搜索（前端过滤）
 const handleSearch = () => {
-  console.log('搜索:', keyword.value)
-  fetchFeedbacks()
+  if (!keyword.value) {
+    fetchFeedbacks()
+    return
+  }
+
+  feedbackList.value = feedbackList.value.filter(item =>
+    item.content.includes(keyword.value)
+  )
 }
 
-// 标记处理
-const handleProcess = (row) => {
-  row.status = '已处理'
-  ElMessage.success('已标记为处理')
+// ✅ 标记已处理（调用后端）
+const handleProcess = async (row) => {
+  try {
+    await axios.put(`http://localhost:3000/api/feedbacks/${row.id}`)
+
+    ElMessage.success('已标记为处理')
+    fetchFeedbacks()
+
+  } catch (err) {
+    console.error(err)
+    ElMessage.error('操作失败')
+  }
 }
 
-// 删除
-const handleDelete = (row) => {
-  console.log('删除反馈:', row)
-  ElMessage.success('删除成功')
+// ✅ 删除
+const handleDelete = async (row) => {
+  try {
+    await axios.delete(`http://localhost:3000/api/feedbacks/${row.id}`)
+
+    ElMessage.success('删除成功')
+    fetchFeedbacks()
+
+  } catch (err) {
+    console.error(err)
+    ElMessage.error('删除失败')
+  }
 }
 
-// 分页
-const handlePageChange = (page) => {
-  console.log('页码:', page)
+// 分页（简单刷新）
+const handlePageChange = () => {
   fetchFeedbacks()
 }
 

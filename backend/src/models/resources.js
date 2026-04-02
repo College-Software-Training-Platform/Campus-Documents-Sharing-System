@@ -57,6 +57,11 @@ class resources extends Sequelize.Model {
       allowNull: true,
       defaultValue: 0
     },
+    download_Count: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      defaultValue: 0
+    },
     audit_Status: {
       type: DataTypes.ENUM('pending','approved','rejected'),
       allowNull: true,

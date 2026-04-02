@@ -1,101 +1,169 @@
-CREATE DATABASE IF NOT EXISTS campus_sharing_system DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-USE campus_sharing_system;
+/*
+ Navicat Premium Dump SQL
 
--- 用户表 (USER)
-CREATE TABLE IF NOT EXISTS `users` (
-  `user_ID` INT AUTO_INCREMENT PRIMARY KEY,
-  `account` VARCHAR(50) NOT NULL UNIQUE,
-  `password` VARCHAR(255) NOT NULL,
-  `name` VARCHAR(100) NOT NULL,
-  `role` ENUM('admin', 'user') DEFAULT 'user',
-  `points_Balance` INT DEFAULT 0,
-  `contact` VARCHAR(100),
-  `account_Status` ENUM('active', 'banned') DEFAULT 'active',
-  `register_Time` DATETIME DEFAULT CURRENT_TIMESTAMP
-);
+ Source Server         : localhost
+ Source Server Type    : MySQL
+ Source Server Version : 80408 (8.4.8)
+ Source Host           : localhost:3306
+ Source Schema         : campus_sharing_system
 
--- 课程表 (COURSE)
-CREATE TABLE IF NOT EXISTS `courses` (
-  `course_ID` INT AUTO_INCREMENT PRIMARY KEY,
-  `course_Name` VARCHAR(200) NOT NULL,
-  `college` VARCHAR(100) NOT NULL
-);
+ Target Server Type    : MySQL
+ Target Server Version : 80408 (8.4.8)
+ File Encoding         : 65001
 
--- 标签表 (TAG)
-CREATE TABLE IF NOT EXISTS `tags` (
-  `tag_ID` INT AUTO_INCREMENT PRIMARY KEY,
-  `tag_Name` VARCHAR(100) NOT NULL UNIQUE
-);
+ Date: 02/04/2026 21:27:28
+*/
 
--- 资料表 (RESOURCE)
-CREATE TABLE IF NOT EXISTS `resources` (
-  `resource_ID` INT AUTO_INCREMENT PRIMARY KEY,
-  `title` VARCHAR(200) NOT NULL,
-  `uploader_ID` INT NOT NULL,
-  `course_ID` INT,
-  `file_Path` VARCHAR(255) NOT NULL,
-  `format` VARCHAR(50),
-  `file_Size` INT,
-  `extracted_Text` TEXT,
-  `ai_Summary` TEXT,
-  `required_Points` INT DEFAULT 0,
-  `audit_Status` ENUM('pending', 'approved', 'rejected') DEFAULT 'pending',
-  `upload_Time` DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (`uploader_ID`) REFERENCES `users`(`user_ID`),
-  FOREIGN KEY (`course_ID`) REFERENCES `courses`(`course_ID`)
-);
+SET NAMES utf8mb4;
+SET FOREIGN_KEY_CHECKS = 0;
 
--- 资料标签关联表 (RESOURCE_TAG_MAP)
-CREATE TABLE IF NOT EXISTS `resource_tag_map` (
-  `resource_ID` INT NOT NULL,
-  `tag_ID` INT NOT NULL,
-  PRIMARY KEY (`resource_ID`, `tag_ID`),
-  FOREIGN KEY (`resource_ID`) REFERENCES `resources`(`resource_ID`) ON DELETE CASCADE,
-  FOREIGN KEY (`tag_ID`) REFERENCES `tags`(`tag_ID`) ON DELETE CASCADE
-);
+-- ----------------------------
+-- Table structure for courses
+-- ----------------------------
+DROP TABLE IF EXISTS `courses`;
+CREATE TABLE `courses`  (
+  `course_ID` int NOT NULL AUTO_INCREMENT,
+  `course_Name` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `college` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  PRIMARY KEY (`course_ID`) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 2 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = Dynamic;
 
--- 积分日志表 (POINTS_LOG)
-CREATE TABLE IF NOT EXISTS `points_logs` (
-  `log_ID` INT AUTO_INCREMENT PRIMARY KEY,
-  `user_ID` INT NOT NULL,
-  `amount` INT NOT NULL,
-  `reason` VARCHAR(255),
-  `ref_ID` INT, -- 可以是关联的资源ID等
-  `create_Time` DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (`user_ID`) REFERENCES `users`(`user_ID`)
-);
+-- ----------------------------
+-- Table structure for download_records
+-- ----------------------------
+DROP TABLE IF EXISTS `download_records`;
+CREATE TABLE `download_records`  (
+  `download_ID` int NOT NULL AUTO_INCREMENT,
+  `user_ID` int NOT NULL,
+  `resource_ID` int NOT NULL,
+  `deducted_Points` int NULL DEFAULT 0,
+  `download_Time` datetime NULL DEFAULT CURRENT_TIMESTAMP,
+  `ip_Address` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL,
+  PRIMARY KEY (`download_ID`) USING BTREE,
+  INDEX `user_ID`(`user_ID` ASC) USING BTREE,
+  INDEX `resource_ID`(`resource_ID` ASC) USING BTREE,
+  CONSTRAINT `download_records_ibfk_1` FOREIGN KEY (`user_ID`) REFERENCES `users` (`user_ID`) ON DELETE RESTRICT ON UPDATE RESTRICT,
+  CONSTRAINT `download_records_ibfk_2` FOREIGN KEY (`resource_ID`) REFERENCES `resources` (`resource_ID`) ON DELETE RESTRICT ON UPDATE RESTRICT
+) ENGINE = InnoDB AUTO_INCREMENT = 9 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = Dynamic;
 
--- 反馈表 (FEEDBACK)
-CREATE TABLE IF NOT EXISTS `feedbacks` (
-  `feedback_ID` INT AUTO_INCREMENT PRIMARY KEY,
-  `user_ID` INT NOT NULL,
-  `content` TEXT NOT NULL,
-  `status` ENUM('pending', 'processed') DEFAULT 'pending',
-  `admin_ID` INT,
-  `reply_Content` TEXT,
-  `submit_Time` DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (`user_ID`) REFERENCES `users`(`user_ID`),
-  FOREIGN KEY (`admin_ID`) REFERENCES `users`(`user_ID`)
-);
+-- ----------------------------
+-- Table structure for feedbacks
+-- ----------------------------
+DROP TABLE IF EXISTS `feedbacks`;
+CREATE TABLE `feedbacks`  (
+  `feedback_ID` int NOT NULL AUTO_INCREMENT,
+  `user_ID` int NOT NULL,
+  `content` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `status` enum('pending','processed') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT 'pending',
+  `admin_ID` int NULL DEFAULT NULL,
+  `reply_Content` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL,
+  `submit_Time` datetime NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`feedback_ID`) USING BTREE,
+  INDEX `user_ID`(`user_ID` ASC) USING BTREE,
+  INDEX `admin_ID`(`admin_ID` ASC) USING BTREE,
+  CONSTRAINT `feedbacks_ibfk_1` FOREIGN KEY (`user_ID`) REFERENCES `users` (`user_ID`) ON DELETE RESTRICT ON UPDATE RESTRICT,
+  CONSTRAINT `feedbacks_ibfk_2` FOREIGN KEY (`admin_ID`) REFERENCES `users` (`user_ID`) ON DELETE RESTRICT ON UPDATE RESTRICT
+) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = Dynamic;
 
--- 系统日志表 (SYSTEM_LOG)
-CREATE TABLE IF NOT EXISTS `system_logs` (
-  `sysLog_ID` INT AUTO_INCREMENT PRIMARY KEY,
-  `operator_ID` INT NOT NULL,
-  `action_Type` VARCHAR(100) NOT NULL,
-  `details` TEXT,
-  `action_Time` DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (`operator_ID`) REFERENCES `users`(`user_ID`)
-);
+-- ----------------------------
+-- Table structure for points_logs
+-- ----------------------------
+DROP TABLE IF EXISTS `points_logs`;
+CREATE TABLE `points_logs`  (
+  `log_ID` int NOT NULL AUTO_INCREMENT,
+  `user_ID` int NOT NULL,
+  `amount` int NOT NULL,
+  `reason` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL,
+  `ref_ID` int NULL DEFAULT NULL,
+  `create_Time` datetime NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`log_ID`) USING BTREE,
+  INDEX `user_ID`(`user_ID` ASC) USING BTREE,
+  CONSTRAINT `points_logs_ibfk_1` FOREIGN KEY (`user_ID`) REFERENCES `users` (`user_ID`) ON DELETE RESTRICT ON UPDATE RESTRICT
+) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = Dynamic;
 
--- 下载记录表 (DOWNLOAD_RECORD)
-CREATE TABLE IF NOT EXISTS `download_records` (
-  `download_ID` INT AUTO_INCREMENT PRIMARY KEY,
-  `user_ID` INT NOT NULL,
-  `resource_ID` INT NOT NULL,
-  `deducted_Points` INT DEFAULT 0,
-  `download_Time` DATETIME DEFAULT CURRENT_TIMESTAMP,
-  `ip_Address` VARCHAR(50),
-  FOREIGN KEY (`user_ID`) REFERENCES `users`(`user_ID`),
-  FOREIGN KEY (`resource_ID`) REFERENCES `resources`(`resource_ID`)
-);
+-- ----------------------------
+-- Table structure for resource_tag_map
+-- ----------------------------
+DROP TABLE IF EXISTS `resource_tag_map`;
+CREATE TABLE `resource_tag_map`  (
+  `resource_ID` int NOT NULL,
+  `tag_ID` int NOT NULL,
+  PRIMARY KEY (`resource_ID`, `tag_ID`) USING BTREE,
+  INDEX `tag_ID`(`tag_ID` ASC) USING BTREE,
+  CONSTRAINT `resource_tag_map_ibfk_1` FOREIGN KEY (`resource_ID`) REFERENCES `resources` (`resource_ID`) ON DELETE CASCADE ON UPDATE RESTRICT,
+  CONSTRAINT `resource_tag_map_ibfk_2` FOREIGN KEY (`tag_ID`) REFERENCES `tags` (`tag_ID`) ON DELETE CASCADE ON UPDATE RESTRICT
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Table structure for resources
+-- ----------------------------
+DROP TABLE IF EXISTS `resources`;
+CREATE TABLE `resources`  (
+  `resource_ID` int NOT NULL AUTO_INCREMENT,
+  `title` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `uploader_ID` int NOT NULL,
+  `course_ID` int NULL DEFAULT NULL,
+  `file_Path` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `format` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL,
+  `file_Size` int NULL DEFAULT NULL,
+  `extracted_Text` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL,
+  `ai_Summary` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL,
+  `required_Points` int NULL DEFAULT 5,
+  `audit_Status` enum('pending','approved','rejected') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT 'pending',
+  `upload_Time` datetime NULL DEFAULT CURRENT_TIMESTAMP,
+  `download_Count` int NULL DEFAULT 0,
+  PRIMARY KEY (`resource_ID`) USING BTREE,
+  INDEX `uploader_ID`(`uploader_ID` ASC) USING BTREE,
+  INDEX `course_ID`(`course_ID` ASC) USING BTREE,
+  CONSTRAINT `resources_ibfk_1` FOREIGN KEY (`uploader_ID`) REFERENCES `users` (`user_ID`) ON DELETE RESTRICT ON UPDATE RESTRICT,
+  CONSTRAINT `resources_ibfk_2` FOREIGN KEY (`course_ID`) REFERENCES `courses` (`course_ID`) ON DELETE RESTRICT ON UPDATE RESTRICT
+) ENGINE = InnoDB AUTO_INCREMENT = 2 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Table structure for system_logs
+-- ----------------------------
+DROP TABLE IF EXISTS `system_logs`;
+CREATE TABLE `system_logs`  (
+  `sysLog_ID` int NOT NULL AUTO_INCREMENT,
+  `operator_ID` int NOT NULL,
+  `action_Type` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `details` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL,
+  `action_Time` datetime NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`sysLog_ID`) USING BTREE,
+  INDEX `operator_ID`(`operator_ID` ASC) USING BTREE,
+  CONSTRAINT `system_logs_ibfk_1` FOREIGN KEY (`operator_ID`) REFERENCES `users` (`user_ID`) ON DELETE RESTRICT ON UPDATE RESTRICT
+) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Table structure for tags
+-- ----------------------------
+DROP TABLE IF EXISTS `tags`;
+CREATE TABLE `tags`  (
+  `tag_ID` int NOT NULL AUTO_INCREMENT,
+  `tag_Name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  PRIMARY KEY (`tag_ID`) USING BTREE,
+  UNIQUE INDEX `tag_Name`(`tag_Name` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Table structure for users
+-- ----------------------------
+DROP TABLE IF EXISTS `users`;
+CREATE TABLE `users`  (
+  `user_ID` int NOT NULL AUTO_INCREMENT,
+  `account` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `password` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `role` enum('admin','user') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT 'user',
+  `points_Balance` int NULL DEFAULT 100,
+  `contact` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL,
+  `account_Status` enum('active','banned') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT 'active',
+  `register_Time` datetime NULL DEFAULT CURRENT_TIMESTAMP,
+  `bio` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL,
+  `major` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL,
+  `avatar_Url` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL,
+  PRIMARY KEY (`user_ID`) USING BTREE,
+  UNIQUE INDEX `account`(`account` ASC) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 2 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = Dynamic;
+
+SET FOREIGN_KEY_CHECKS = 1;

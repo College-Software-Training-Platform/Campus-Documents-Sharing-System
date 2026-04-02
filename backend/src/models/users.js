@@ -39,6 +39,23 @@ class users extends Sequelize.Model {
       type: DataTypes.STRING(100),
       allowNull: true
     },
+    // --- 新增字段开始 ---
+    bio: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+      comment: "个人简介"
+    },
+    major: {
+      type: DataTypes.STRING(100),
+      allowNull: true,
+      comment: "所属专业/学院"
+    },
+    avatar_Url: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+      comment: "头像链接地址"
+    },
+    // --- 新增字段结束 ---
     account_Status: {
       type: DataTypes.ENUM('active','banned'),
       allowNull: true,
@@ -55,7 +72,7 @@ class users extends Sequelize.Model {
     timestamps: false,
     indexes: [
       {
-        name: "PRIMARY",
+        name: "PRIMARY",                                                                                             
         unique: true,
         using: "BTREE",
         fields: [

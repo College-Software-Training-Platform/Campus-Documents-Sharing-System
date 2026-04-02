@@ -1,30 +1,35 @@
 const path = require('path');
+// 确保环境变量正确加载
 require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 
 const express = require('express');
 const cors = require('cors');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = 3000;
 
-// 中间件
+// 中间件配置
 app.use(cors());
 app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
 
-// 基础路由测试
-app.get('/', (req, res) => {
-  res.json({ message: 'Welcome to Campus Documents Sharing System API' });
-});
+// --- 路由挂载区 ---
+const usersRouter = require('./routes/users.routes'); 
+app.use('/api/users', usersRouter);
 
-// 注册路由模块
+const resourceRouter = require('./routes/resource.routes');
+app.use('/api/resources', resourceRouter);
+
+const feedbackRouter = require('./routes/feedback.routes');
+app.use('/api/feedbacks', feedbackRouter);
+
 const aiRoute = require('./routes/aiRoute');
 app.use('/api/ai', aiRoute);
 
-// 其他路由注册 (待实现)
-// app.use('/api/users', require('./routes/user.routes'));
-// app.use('/api/resources', require('./routes/resource.routes'));
-
+// --- 服务器启动 ---
+// 只保留一个监听器
 app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}.`);
+  console.log(`====================================`);
+  console.log(`🚀 Campus Sharing System Server `);
+  console.log(`   Running on: http://localhost:${PORT}`);
+  console.log(`====================================`);
 });

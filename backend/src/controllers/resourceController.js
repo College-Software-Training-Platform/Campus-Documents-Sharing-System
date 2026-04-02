@@ -1,10 +1,144 @@
+// backend/src/controllers/resourceController.js
+const Sequelize = require('sequelize');
+const sequelize = require('../config/database');
+const path = require('path');
+const fs = require('fs');
+
+// 初始化所有需要的模型
+const initModels = require('../models/init-models');
+const models = initModels(sequelize);
+const { resources, users, download_records, points_logs } = models;
+
 /**
- * @file resourceController.js
- * @description 资源/文档核心业务控制器
- * @module 控制器层
- * * 主要职责：
- * 1. 校园资料的上传逻辑 (处理 Multer 文件保存)
- * 2. 资源列表的分页查询、分类筛选、搜索功能
- * 3. 资源详情获取及下载次数统计
- * 4. 用户个人资料库 (My Resources) 的数据维护
+ * ✅ 核心逻辑：下载资源并处理积分事务
  */
+const downloadResource = async (req, res) => {
+    let t;
+    try {
+        const { userId, resourceId } = req.body;
+
+        // 1. 查找资源及相关信息
+        const resource = await resources.findByPk(resourceId);
+        if (!resource) {
+            return res.status(404).json({ code: 404, message: '资源不存在' });
+        }
+
+        // 2. 查找下载者（买家）信息
+        const buyer = await users.findByPk(userId);
+        if (!buyer) {
+            return res.status(404).json({ code: 404, message: '用户不存在' });
+        }
+
+        const COST = 5;       // 固定下载消耗
+        const REWARD = 2;     // 固定作者收益
+
+        // 3. 检查积分是否足够
+        if (buyer.points_Balance < COST) {
+            return res.status(400).json({ code: 400, message: '积分不足，无法下载' });
+        }
+
+        // --- 📂 物理路径处理 (关键修改点) ---
+        // 使用 process.cwd() 锁定项目根目录，避免层级跳错
+        const absolutePath = path.resolve(process.cwd(), resource.file_Path);
+        
+        console.log('--- 🚀 正在尝试定位文件 ---');
+        console.log('项目根目录:', process.cwd());
+        console.log('数据库存入路径:', resource.file_Path);
+        console.log('解析后绝对路径:', absolutePath);
+
+        // 检查物理文件是否存在
+        if (!fs.existsSync(absolutePath)) {
+            console.error('❌ 错误：在上述路径未找到文件！');
+            return res.status(404).json({ code: 404, message: '服务器物理文件丢失，积分未扣除' });
+        }
+
+        // 4. 开启数据库事务
+        t = await sequelize.transaction();
+
+        // A. 扣除下载者积分
+        await users.decrement('points_Balance', { by: COST, where: { user_ID: userId }, transaction: t });
+
+        // B. 增加上传者积分
+        await users.increment('points_Balance', { by: REWARD, where: { user_ID: resource.uploader_ID }, transaction: t });
+
+        // C. 增加资源下载计数
+        await resources.increment('download_Count', { by: 1, where: { resource_ID: resourceId }, transaction: t });
+
+        // D. 写入下载记录表
+        await download_records.create({
+            user_ID: userId,
+            resource_ID: resourceId,
+            deducted_Points: COST,
+            download_Time: new Date()
+        }, { transaction: t });
+
+        // E. 写入积分明细表（如果你数据库有这条表，请取消注释）
+        /*
+        await points_logs.create({
+            user_ID: userId,
+            change_Amount: -COST,
+            change_Type: '下载支出',
+            description: `下载资源: ${resource.title}`,
+            create_Time: new Date()
+        }, { transaction: t });
+        */
+
+        // 5. 提交事务
+        await t.commit();
+        console.log('✅ 积分处理成功，开始传输文件流...');
+
+        // 6. 执行下载
+        return res.download(absolutePath, `${resource.title}.${resource.format || 'jpg'}`);
+
+    } catch (err) {
+        if (t) await t.rollback();
+        console.error('❌ 下载业务执行失败:', err.message);
+        return res.status(500).json({ code: 500, message: '服务器内部错误，下载失败' });
+    }
+};
+
+/**
+ * ✅ 现有审核逻辑
+ */
+const getPendingResources = async () => {
+    try {
+        const pendingList = await resources.findAll({
+            where: { audit_Status: 'pending' }
+        });
+        return pendingList.map(r => r.toJSON());
+    } catch (err) {
+        console.error(err);
+        throw err;
+    }
+};
+
+const approveResource = async (resourceId) => {
+    try {
+        await resources.update(
+            { audit_Status: 'approved' },
+            { where: { resource_ID: resourceId } }
+        );
+    } catch (err) {
+        console.error(err);
+        throw err;
+    }
+};
+
+const rejectResource = async (resourceId) => {
+    try {
+        await resources.update(
+            { audit_Status: 'rejected' },
+            { where: { resource_ID: resourceId } }
+        );
+    } catch (err) {
+        console.error(err);
+        throw err;
+    }
+};
+
+module.exports = {
+    downloadResource,
+    getPendingResources,
+    approveResource,
+    rejectResource
+};
