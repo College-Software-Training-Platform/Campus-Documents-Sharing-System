@@ -136,9 +136,40 @@ const rejectResource = async (resourceId) => {
     }
 };
 
+
+// 审核资源（统一处理通过 / 驳回）
+const auditResource = async (req, res) => {
+    try {
+        const { id } = req.params
+        const { status } = req.body   // approved / rejected
+
+        // 校验状态
+        if (!['approved', 'rejected'].includes(status)) {
+            return res.status(400).json({ message: '非法状态' })
+        }
+
+        const result = await resources.update(
+            { audit_Status: status },
+            { where: { resource_ID: id } }
+        )
+
+        if (result[0] === 0) {
+            return res.status(404).json({ message: '资源不存在' })
+        }
+
+        res.json({ message: '审核成功' })
+
+    } catch (err) {
+        console.error(err)
+        res.status(500).json({ message: '审核失败' })
+    }
+}
+
+
+
+//导出
 module.exports = {
     downloadResource,
     getPendingResources,
-    approveResource,
-    rejectResource
+    auditResource   
 };
