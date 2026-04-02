@@ -2,14 +2,6 @@
  * @file userController.js
  * @description 用户模块业务逻辑控制器
  * @module 控制器层
- * * --- 功能点清单 ---
- * 1. getUserProfile: 获取基础资料
- * 2. updateProfile: 修改基本资料
- * 3. changePassword: 修改密码
- * 4. getUserStats: 获取统计数
- * 5. getMyResources: 获取上传列表
- * 6. getMyDownloads: 获取下载记录 (含关联查询)
- * 7. getMyFavorites: 获取收藏列表 (预留)
  */
 
 const sequelize = require('../config/database'); 
@@ -19,8 +11,26 @@ const models = initModels(sequelize);
 const { users, resources, download_records } = models;
 
 /**
+ * ✅ 管理员：获取所有用户（合并远程功能）
+ */
+exports.getUsers = async (req, res) => {
+    try {
+        const list = await users.findAll();
+        const data = list.map(u => {
+            const obj = u.toJSON();
+            delete obj.password;
+            return obj;
+        });
+
+        res.status(200).json({ code: 200, data });
+    } catch (err) {
+        console.error('获取用户失败:', err);
+        res.status(500).json({ code: 500, message: '获取用户失败' });
+    }
+};
+
+/**
  * 1. 获取用户详细资料
- * GET /api/users/profile
  */
 exports.getUserProfile = async (req, res) => {
     try {
@@ -39,14 +49,13 @@ exports.getUserProfile = async (req, res) => {
 
 /**
  * 2. 修改用户基本资料
- * POST /api/users/update
  */
 exports.updateProfile = async (req, res) => {
     try {
         const { studentId, nickname, bio, major } = req.body;
         if (!studentId) return res.status(400).json({ code: 400, message: '缺少学号标识' });
 
-        const [affectedRows] = await users.update(
+        await users.update(
             { name: nickname, bio, major }, 
             { where: { account: studentId } }
         );
@@ -93,7 +102,6 @@ exports.getUserStats = async (req, res) => {
 
 /**
  * 5. 获取我的上传列表
- * GET /api/users/resources
  */
 exports.getMyResources = async (req, res) => {
     try {
@@ -109,7 +117,7 @@ exports.getMyResources = async (req, res) => {
 };
 
 /**
- * 6. 获取我的下载记录 (修改版)
+ * 6. 获取我的下载记录
  */
 exports.getMyDownloads = async (req, res) => {
     try {
@@ -120,8 +128,8 @@ exports.getMyDownloads = async (req, res) => {
             where: { user_ID: userId },
             include: [{
                 model: resources,
-                as: 'resource', 
-                attributes: ['title', 'format'] // 改为 format，对应你 resources 表的字段
+                as: 'resource',
+                attributes: ['title', 'format']
             }],
             order: [['download_Time', 'DESC']]
         });
@@ -129,20 +137,20 @@ exports.getMyDownloads = async (req, res) => {
         const data = records.map(r => ({
             record_ID: r.record_ID,
             title: r.resource ? r.resource.title : '资源已失效',
-            format: r.resource ? r.resource.format : '-', // 统一为 format
-            deducted_Points: r.deducted_Points, // 这里的字段名必须和你数据库 download_records 表一致
+            format: r.resource ? r.resource.format : '-',
+            deducted_Points: r.deducted_Points,
             download_Time: r.download_Time
         }));
 
         res.status(200).json({ code: 200, data });
     } catch (error) {
-        console.error("后端错误详情:", error); // 打印到黑窗口，方便你调试 500 错误
+        console.error("后端错误详情:", error);
         res.status(500).json({ code: 500, message: '获取下载记录失败', debug: error.message });
     }
 };
 
 /**
- * 7. 获取我的收藏 (预留)
+ * 7. 获取收藏（预留）
  */
 exports.getMyFavorites = async (req, res) => {
     res.status(200).json({ code: 200, data: [], message: '收藏模块建设中' });
@@ -154,7 +162,7 @@ exports.getMyFavorites = async (req, res) => {
 exports.getPointDetails = async (req, res) => {
     try {
         const { userId } = req.query;
-        // 积分明细逻辑通常可以复用下载记录，或者从专门的积分流水表读取
+
         const records = await download_records.findAll({
             where: { user_ID: userId },
             include: [{ model: resources, as: 'resource', attributes: ['title'] }],

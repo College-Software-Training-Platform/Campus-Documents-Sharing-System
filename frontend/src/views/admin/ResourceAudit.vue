@@ -2,6 +2,7 @@
   <div class="resource-audit">
     <h3>资源审核管理</h3>
     
+    <!-- 筛选 -->
     <el-card class="filter-card">
       <el-form :inline="true" :model="filterForm">
         <el-form-item label="资源标题">
@@ -20,6 +21,7 @@
       </el-form>
     </el-card>
 
+    <!-- 表格 -->
     <el-table :data="tableData" v-loading="loading" border style="width: 100%; margin-top: 20px">
       <el-table-column prop="resource_ID" label="ID" width="70" />
       <el-table-column prop="title" label="资源名称" min-width="180" />
@@ -59,38 +61,43 @@
 <script setup>
 import { ref, onMounted, reactive } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import axios from 'axios' // 假设你直接使用 axios，也可以改用你封装的 api 模块
+import axios from 'axios'
 
 const loading = ref(false)
 const tableData = ref([])
+
+// 筛选表单
 const filterForm = reactive({
   title: '',
   status: 'pending'
 })
 
+// 状态映射
 const statusMap = {
   pending: { text: '待审核', tag: 'warning' },
   approved: { text: '已通过', tag: 'success' },
   rejected: { text: '已驳回', tag: 'danger' }
 }
 
-// 获取数据列表
+// 获取列表（直接对接后端接口）
 const fetchList = async () => {
   loading.value = true
   try {
-    // 注意：这里的 URL 要对应你后端实现的接口
-    const res = await axios.get('/api/resources/audit-list', { params: filterForm })
-    if (res.data.code === 200) {
-      tableData.value = res.data.data.list
-    }
-  } catch (error) {
+    const res = await axios.get('http://localhost:3000/api/resources/pending')
+    // 后端返回数组
+    tableData.value = res.data.map(item => ({
+      ...item,
+      audit_Status: item.audit_Status || item.audit_Status // 确保字段正确
+    }))
+  } catch (err) {
     ElMessage.error('获取列表失败')
+    console.error(err)
   } finally {
     loading.value = false
   }
 }
 
-// 处理审核动作
+// 审核操作
 const handleAudit = (row, status) => {
   const actionText = status === 'approved' ? '通过' : '驳回'
   ElMessageBox.confirm(`确定要${actionText}资源《${row.title}》吗？`, '提示', {
@@ -99,22 +106,20 @@ const handleAudit = (row, status) => {
     type: status === 'approved' ? 'success' : 'warning'
   }).then(async () => {
     try {
-      const res = await axios.post(`/api/resources/audit`, {
-        resource_ID: row.resource_ID,
-        status: status
+      await axios.put(`http://localhost:3000/api/resources/${row.resource_ID}/audit`, {
+        status
       })
-      if (res.data.code === 200) {
-        ElMessage.success('操作成功')
-        fetchList() // 刷新列表
-      }
-    } catch (error) {
+      ElMessage.success('操作成功')
+      fetchList()
+    } catch (err) {
+      console.error(err)
       ElMessage.error('操作失败')
     }
   })
 }
 
+// 查看详情（打开文件路径）
 const viewDetail = (row) => {
-  // 预览文件逻辑，或者跳转详情页
   window.open(row.file_Path, '_blank')
 }
 
@@ -127,6 +132,7 @@ onMounted(() => {
 .resource-audit {
   padding: 20px;
 }
+
 .filter-card {
   margin-bottom: 20px;
 }

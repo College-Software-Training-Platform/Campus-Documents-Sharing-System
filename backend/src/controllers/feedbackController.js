@@ -7,9 +7,10 @@ const FeedbackModel = require('../models/feedbacks')(sequelize, Sequelize.DataTy
 const getFeedbacks = async () => {
   try {
     const feedbacks = await FeedbackModel.findAll();
-    console.log('用户反馈列表:', feedbacks.map(f => f.toJSON()));
+    return feedbacks.map(f => f.toJSON());
   } catch (err) {
     console.error(err);
+    throw err;
   }
 };
 
@@ -36,9 +37,24 @@ const deleteFeedback = async (feedbackId) => {
   }
 };
 
-// 测试
-(async () => {
-  await getFeedbacks();
-  // await processFeedback(1);
-  // await deleteFeedback(2);
-})();
+const replyFeedback = async (feedbackId, replyContent) => {
+  try {
+    await FeedbackModel.update(
+      {
+        reply_Content: replyContent,
+        status: 'processed'
+      },
+      {
+        where: { feedback_ID: feedbackId }
+      }
+    );
+    console.log(`反馈 ${feedbackId} 已回复`);
+  } catch (err) {
+    console.error(err);
+  }
+};
+
+module.exports = {
+  getFeedbacks,
+  replyFeedback
+};
