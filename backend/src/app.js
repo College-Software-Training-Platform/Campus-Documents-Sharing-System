@@ -1,4 +1,6 @@
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
+
 const express = require('express');
 const cors = require('cors');
 
@@ -15,8 +17,12 @@ app.get('/', (req, res) => {
   res.json({ message: 'Welcome to Campus Documents Sharing System API' });
 });
 
-// 注册路由模块 (待实现)
- app.use('/api/users', require('./routes/users.routes'));
+// 注册路由模块
+const aiRoute = require('./routes/aiRoute');
+app.use('/api/ai', aiRoute);
+
+// 其他路由注册 (待实现)
+// app.use('/api/users', require('./routes/user.routes'));
 // app.use('/api/resources', require('./routes/resource.routes'));
 
 app.listen(PORT, () => {
