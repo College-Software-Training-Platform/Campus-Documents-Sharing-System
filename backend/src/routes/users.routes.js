@@ -3,6 +3,8 @@ const router = express.Router();
 const userController = require('../controllers/userController');
 // 1. 引入你刚刚修改好的资源控制器
 const resourceController = require('../controllers/resourceController');
+// ✅ 【新增】获取所有用户（管理端）
+router.get('/', userController.getUsers);
 
 // --- 基础资料模块 ---
 router.get('/profile', userController.getUserProfile);
