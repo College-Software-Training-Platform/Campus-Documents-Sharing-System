@@ -161,8 +161,7 @@ const handleLogin = async () => {
 }
 
 .custom-input :deep(.el-input__wrapper) {
-  padding: 15px;
-  padding-left: 35px;
+  padding: 12px 15px;
   border-radius: 8px;
   box-shadow: 0 0 0 1px #dcdfe6 inset;
   background-color: #F8FAFC;
@@ -173,7 +172,11 @@ const handleLogin = async () => {
 }
 .custom-input :deep(.el-input__inner) {
   font-size: 13px;
-  height: 16px; 
+  height: 24px; 
+}
+.custom-input :deep(.el-input__prefix) {
+  display: flex;
+  align-items: center;
 }
 .custom-input :deep(.el-input__inner::placeholder) {
   color: #94A3B8;
@@ -185,10 +188,9 @@ const handleLogin = async () => {
 }
 
 .prefix-icon {
-  position: absolute;
-  left: -20px;
   width: 18px;
   height: 18px;
+  margin-right: 8px;
   pointer-events: none;
 }
 

@@ -5,7 +5,7 @@
         <div class="header-icon">
           <img src="@/assets/icon/auto_stories.svg" alt="logo" style="width: 36px; height: 36px; vertical-align: middle;" />
         </div>
-        <div class="art-title">加入智慧校园</div>
+        <div class="art-title">智慧校园资料共享</div>
         <div class="subtitle">创建您的学术账号，开启共享之旅</div>
       </div>
 
@@ -80,7 +80,7 @@
 
     <div class="copyright">
       &copy; 2026 智慧校园资料共享平台. 保留所有权利。<br />
-      您的学术成长伴侣。
+      致力于构建更高效、更开放、更智能的校园学术资源流通体系。
     </div>
   </div>
 </template>
@@ -197,8 +197,7 @@ const handleRegister = async () => {
 }
 
 .custom-input :deep(.el-input__wrapper) {
-  padding: 12px;
-  padding-left: 35px;
+  padding: 12px 15px;
   border-radius: 8px;
   box-shadow: 0 0 0 1px #dcdfe6 inset;
   background-color: #F8FAFC;
@@ -209,7 +208,11 @@ const handleRegister = async () => {
 }
 .custom-input :deep(.el-input__inner) {
   font-size: 13px;
-  height: 16px; 
+  height: 24px; 
+}
+.custom-input :deep(.el-input__prefix) {
+  display: flex;
+  align-items: center;
 }
 
 .custom-pwd :deep(.el-input__wrapper) {
@@ -217,10 +220,9 @@ const handleRegister = async () => {
 }
 
 .prefix-icon {
-  position: absolute;
-  left: -20px;
   width: 18px;
   height: 18px;
+  margin-right: 8px;
   pointer-events: none;
 }
 
@@ -275,7 +277,7 @@ const handleRegister = async () => {
 }
 
 .copyright {
-  margin-top: 30px;
+  margin-top: 20px;
   text-align: center;
   color: #909399;
   font-size: 12px;
