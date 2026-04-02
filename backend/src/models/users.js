@@ -55,7 +55,7 @@ class users extends Sequelize.Model {
     timestamps: false,
     indexes: [
       {
-        name: "PRIMARY",
+        name: "PRIMARY",                                                                                             
         unique: true,
         using: "BTREE",
         fields: [
