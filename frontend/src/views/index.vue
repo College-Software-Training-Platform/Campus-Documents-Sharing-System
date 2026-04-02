@@ -20,7 +20,7 @@
       </div>
 
       <div class="cards">
-        <CourseCard v-for="(item, index) in dataList" :key="index" :item="item" />
+        <ResourceCard v-for="(item, index) in dataList" :key="index" :item="item" />
       </div>
 
       <div style="text-align:center; margin-top:20px">
@@ -39,7 +39,7 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
 import UserHeader from '@/components/layout/UserHeader.vue'
-import CourseCard from '@/views/user/components/CourseCard.vue'
+import ResourceCard from '@/views/user/components/ResourceCard.vue'
 
 const dataList = ref([
   { title: '数据结构精讲', price: 10 },

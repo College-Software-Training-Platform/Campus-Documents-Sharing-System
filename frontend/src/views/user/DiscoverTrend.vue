@@ -20,7 +20,7 @@
       </div>
 
       <div class="course-list-row">
-        <CourseCard 
+        <ResourceCard 
           v-for="item in displayResources" 
           :key="item.resourceId" 
           :item="{ title: item.title, price: item.points }" 
@@ -38,7 +38,7 @@
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import DiscoverSubNav from './components/DiscoverSubNav.vue'
-import CourseCard from './components/CourseCard.vue'
+import ResourceCard from './components/ResourceCard.vue'
 
 const router = useRouter()
 
