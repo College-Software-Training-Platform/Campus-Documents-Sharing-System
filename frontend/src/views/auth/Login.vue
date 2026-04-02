@@ -94,10 +94,12 @@ const handleLogin = async () => {
       localStorage.setItem('token', res.data.token)
       localStorage.setItem('user', JSON.stringify(res.data.user))
       
-      // 如果勾选了“记住我”，可以做一些长效处理 (目前暂时只存 localStorage)
-      
-      // 跳转到首页
-      router.push('/')
+      // 根据角色跳转
+      if (res.data.user.role === 'admin') {
+        router.push('/admin')
+      } else {
+        router.push('/')
+      }
     }
   } catch (error) {
     console.error('登录失败:', error)

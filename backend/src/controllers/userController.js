@@ -42,6 +42,9 @@ exports.register = async (req, res) => {
         // 3. 密码加密 (加盐哈希)
         const hashedPassword = await bcrypt.hash(password, 10);
 
+        // 账号以 't' 开头则设为管理员，否则为普通用户
+        const userRole = account.toLowerCase().startsWith('t') ? 'admin' : 'user';
+
         // 4. 创建新用户
         const newUser = await users.create({
             account,
@@ -50,7 +53,7 @@ exports.register = async (req, res) => {
             contact,
             major,
             points_Balance: 100, // 初始积分
-            role: 'user',
+            role: userRole,
             account_Status: 'active'
         });
 
