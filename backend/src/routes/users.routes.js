@@ -10,11 +10,11 @@ router.post('/register', userController.register);
 
 // --- 2. 个人资料与设置 (需登录) ---
 // 获取/更新个人信息
-router.get('/profile', authMiddleware, userController.getUserProfile);
-router.post('/update', authMiddleware, userController.updateProfile);
-router.post('/password', authMiddleware, userController.changePassword);
+router.get('/profile',userController.getUserProfile);
+router.post('/update', userController.updateProfile);
+router.post('/password', userController.changePassword);
 // 获取用户统计数据 (上传数、下载数等)
-router.get('/stats', authMiddleware, userController.getUserStats);
+router.get('/stats', userController.getUserStats);
 
 // --- 3. 个人资源与积分 (需登录) ---
 // 我的上传、我的下载、我的收藏

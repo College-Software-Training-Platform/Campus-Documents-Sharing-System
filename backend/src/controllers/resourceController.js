@@ -10,67 +10,88 @@ const models = initModels(sequelize);
 const { resources, users, download_records } = models;
 
 /**
- * ✅ 核心逻辑：资源下载
+ * ✅ 核心逻辑：资源下载（已修正字段名以适配数据库）
  */
 const downloadResource = async (req, res) => {
     let t;
     try {
         const { resourceId } = req.body;
-        const userId = req.user.userId; // 强制使用鉴权后的用户ID
+        const userId = req.user.userId;
 
-        const resource = await resources.findByPk(resourceId);
+        // 1. 获取资源与用户信息
+        const resource = await models.resources.findByPk(resourceId);
         if (!resource) return res.status(404).json({ code: 404, message: '资源不存在' });
 
-        const buyer = await users.findByPk(userId);
+        const buyer = await models.users.findByPk(userId);
         if (!buyer) return res.status(404).json({ code: 404, message: '用户不存在' });
 
-        const COST = resource.required_Points || 0; // 使用资源定义的积分
+        const COST = resource.required_Points || 0; 
         if (buyer.points_Balance < COST) return res.status(400).json({ code: 400, message: '积分不足' });
 
-        // ✅ 修正路径解析：__dirname 在 src/controllers，回溯两层到 backend 根目录获取 uploads
+        // 2. 物理文件校验
         const absolutePath = path.resolve(__dirname, '../../', resource.file_Path);
         if (!fs.existsSync(absolutePath)) {
-            console.error('找不到物理文件:', absolutePath);
             return res.status(404).json({ code: 404, message: '物理文件丢失，请联系管理员' });
         }
 
+        // 3. 开启原子事务
         t = await sequelize.transaction();
         
-        // 核心事务逻辑
         if (COST > 0) {
-            await users.decrement('points_Balance', { by: COST, where: { user_ID: userId }, transaction: t });
-            // 上传者获得 40% 的收益 (简单演示)
+            // A. 下载者：扣除积分
+            await models.users.decrement('points_Balance', { by: COST, where: { user_ID: userId }, transaction: t });
+
+            // B. 下载者：写入支出明细 (注意字段名 amount, create_Time)
+            await models.points_logs.create({
+                user_ID: userId,
+                amount: -COST,
+                reason: `下载资源支出：${resource.title}`,
+                create_Time: new Date() 
+            }, { transaction: t });
+
+            // C. 上传者：获得收益 (40%)
             const income = Math.floor(COST * 0.4);
             if (income > 0) {
-                await users.increment('points_Balance', { by: income, where: { user_ID: resource.uploader_ID }, transaction: t });
+                await models.users.increment('points_Balance', { by: income, where: { user_ID: resource.uploader_ID }, transaction: t });
+
+                // D. 上传者：写入收益明细
+                await models.points_logs.create({
+                    user_ID: resource.uploader_ID,
+                    amount: income,
+                    reason: `资源被下载获益：${resource.title}`,
+                    create_Time: new Date()
+                }, { transaction: t });
             }
         }
 
-        await download_records.create({ 
+        // E. 记录下载历史 (对应你的 download_records 表)
+        await models.download_records.create({ 
             user_ID: userId, 
             resource_ID: resourceId, 
             deducted_Points: COST, 
             download_Time: new Date() 
         }, { transaction: t });
 
+        // F. 增加资源的累计下载次数
+        await models.resources.increment('download_Count', { by: 1, where: { resource_ID: resourceId }, transaction: t });
+
+        // 4. 提交所有变更
         await t.commit();
         
-        // 执行下载 (增加回调以捕获发送流时的错误)
+        // 5. 执行文件传输
         return res.download(absolutePath, `${resource.title}.${resource.format}`, (err) => {
-            if (err) {
-                console.error('文件传输过程中发生错误:', err);
-                // 即使传输失败也无需再次 res.send，因为 res.download 可能已经发送了部分响应
-            }
+            if (err) console.error('传输中断:', err);
         });
+
     } catch (err) {
         if (t) await t.rollback();
-        console.error('下载预处理失败:', err);
+        console.error('下载处理崩溃:', err);
         return res.status(500).json({ code: 500, message: '系统下载处理失败' });
     }
 };
 
 /**
- * ✅ 核心逻辑：上传资源（带课程与标签自动关联）
+ * ✅ 核心逻辑：上传资源（包含：资源保存、课程/标签关联、奖励积分、写明细）
  */
 const uploadResource = async (req, res) => {
     let t;
@@ -82,26 +103,43 @@ const uploadResource = async (req, res) => {
 
         t = await sequelize.transaction();
 
+        // 1. 处理课程 (findOrCreate)
         const [course] = await models.courses.findOrCreate({ 
             where: { course_Name: courseName },
-            defaults: { college: '通用学院' }, // 补全必填字段
+            defaults: { college: '通用学院' }, 
             transaction: t 
         });
 
-        const newResource = await resources.create({
+        // 2. 创建资源记录
+        const newResource = await models.resources.create({
             title, uploader_ID, course_ID: course.course_ID,
-            file_Path: 'uploads/' + path.basename(req.file.path), // 存入相对路径，防止超出长度并增加迁移性
+            file_Path: 'uploads/' + path.basename(req.file.path), 
             format: path.extname(req.file.originalname).substring(1).toLowerCase(),
             file_Size: req.file.size,
             required_Points: points || 0,
             ai_Summary, audit_Status: 'pending', upload_Time: new Date(), download_Count: 0
         }, { transaction: t });
 
+        // 🌟 3. 补全：上传奖励 10 积分
+        await models.users.increment('points_Balance', { by: 10, where: { user_ID: uploader_ID }, transaction: t });
+
+        // 🌟 4. 补全：记录上传奖励明细 (amount, create_Time)
+        await models.points_logs.create({
+            user_ID: uploader_ID,
+            amount: 10,
+            reason: `发布资源奖励：${title}`,
+            create_Time: new Date()
+        }, { transaction: t });
+
+        // 5. 处理标签映射
         if (tags) {
             const tagList = Array.isArray(tags) ? tags : JSON.parse(tags);
             for (const tagName of tagList) {
                 const [tagRecord] = await models.tags.findOrCreate({ where: { tag_Name: tagName }, transaction: t });
-                await models.resource_tag_map.create({ resource_ID: newResource.resource_ID, tag_ID: tagRecord.tag_ID }, { transaction: t });
+                await models.resource_tag_map.create({ 
+                    resource_ID: newResource.resource_ID, 
+                    tag_ID: tagRecord.tag_ID 
+                }, { transaction: t });
             }
         }
 
@@ -110,7 +148,7 @@ const uploadResource = async (req, res) => {
     } catch (err) {
         if (t) await t.rollback();
         if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
-        console.error('上传失败:', err);
+        console.error('上传处理失败:', err);
         res.status(500).json({ code: 500, message: '上传失败' });
     }
 };
@@ -140,7 +178,7 @@ const getDiscoverTrend = async (req, res) => {
 };
 
 /**
- * ✅ 获取待审核列表 (适配路由)
+ * ✅ 获取待审核列表
  */
 const getPendingResources = async (req, res) => {
     try {
@@ -156,12 +194,12 @@ const getPendingResources = async (req, res) => {
 };
 
 /**
- * ✅ 统一审核逻辑 (适配 router.put('/:id/audit'))
+ * ✅ 统一审核逻辑
  */
 const auditResource = async (req, res) => {
     try {
         const { id } = req.params;
-        const { status } = req.body; // 前端传 'approved' 或 'rejected'
+        const { status } = req.body; 
 
         if (!['approved', 'rejected'].includes(status)) {
             return res.status(400).json({ code: 400, message: '审核状态无效' });
@@ -213,6 +251,9 @@ const getResourceDetail = async (req, res) => {
     }
 };
 
+/**
+ * ✅ 获取所有课程列表
+ */
 const getCourses = async (req, res) => {
     try {
         const list = await models.courses.findAll();
@@ -228,8 +269,6 @@ module.exports = {
     getDiscoverTrend,
     getResourceDetail,
     getPendingResources,
-    // approveResource,
-    // rejectResource,
     auditResource,
     getCourses
 };

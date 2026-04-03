@@ -82,19 +82,29 @@ const editForm = reactive({
 // --- 1. 进页面先获取当前资料，填充表单 ---
 const fetchCurrentData = async () => {
   try {
+    // 打印日志方便你在浏览器控制台 F12 查看
+    console.log('正在请求资料，目标学号:', targetStudentId);
+    
     const res = await axios.get('http://localhost:3000/api/users/profile', {
       params: { studentId: targetStudentId }
     })
+
     if (res.data.code === 200) {
       const data = res.data.data
-      editForm.nickname = data.name    // 注意：后端字段是 name
-      editForm.bio = data.bio
-      editForm.major = data.major
+      // 将后端数据填充到响应式表单中
+      editForm.nickname = data.name    // 后端 users 表字段是 name
+      editForm.bio = data.bio || ''
+      editForm.major = data.major || ''
       editForm.avatarUrl = data.avatar_Url
       imageUrl.value = data.avatar_Url || defaultAvatar
+      console.log('资料加载成功:', data);
+    } else {
+      ElMessage.error(res.data.message || '获取资料失败');
     }
   } catch (error) {
-    ElMessage.error('无法加载当前资料')
+    // 🌟 这里会告诉你具体是 404 (路径不对) 还是 500 (后端挂了)
+    console.error('API请求详情:', error.response || error);
+    ElMessage.error('服务器连接异常，请检查后端服务是否启动');
   }
 }
 

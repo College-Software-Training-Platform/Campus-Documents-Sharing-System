@@ -176,21 +176,37 @@ exports.getUserProfile = async (req, res) => {
 };
 
 /**
- * ✅ 2. 修改用户基本资料
+ * ✅ 2. 修改用户基本资料 (已修正字段名并加入头像支持)
  */
 exports.updateProfile = async (req, res) => {
     try {
-        const { studentId, nickname, bio, major } = req.body;
+        // 从请求体中解构数据
+        const { studentId, nickname, bio, major, avatarUrl } = req.body;
 
-        await users.update(
-            { name: nickname, bio: bio, major: major },
+        if (!studentId) {
+            return res.status(400).json({ code: 400, message: '缺少 studentId 参数' });
+        }
+
+        // 执行数据库更新
+        // 🌟 映射关系：name <- nickname, avatar_Url <- avatarUrl
+        const [updatedRows] = await models.users.update(
+            { 
+                name: nickname, 
+                bio: bio, 
+                major: major,
+                avatar_Url: avatarUrl  // 确保这里对应你数据库的真实字段名
+            },
             { where: { account: studentId } }
         );
+
+        if (updatedRows === 0) {
+            return res.status(404).json({ code: 404, message: '未找到该学号的用户' });
+        }
 
         res.status(200).json({ code: 200, message: '资料已更新' });
     } catch (error) {
         console.error("更新资料失败:", error);
-        res.status(500).json({ code: 500, message: '更新失败' });
+        res.status(500).json({ code: 500, message: '更新失败: ' + error.message });
     }
 };
 
@@ -304,16 +320,20 @@ exports.getMyFavorites = async (req, res) => {
 };
 
 /**
- * ✅ 8. 积分明细
+ * ✅ 8. 积分明细（优化版：直接查询积分日志表）
+ */
+/**
+ * ✅ 核心逻辑：获取积分明细（适配数据库真实字段名版本）
  */
 exports.getPointDetails = async (req, res) => {
     try {
         const { studentId, userId } = req.query;
         let targetUid = userId;
 
-        // 如果只有学号，先查 UID
+        // 1. 如果只有学号，先查内部 UID
         if (!targetUid && studentId) {
-            const user = await users.findOne({ where: { account: studentId } });
+            // 确保使用 models.users 进行查询
+            const user = await models.users.findOne({ where: { account: studentId } });
             targetUid = user ? user.user_ID : null;
         }
 
@@ -321,43 +341,37 @@ exports.getPointDetails = async (req, res) => {
             return res.status(200).json({ code: 200, data: [], message: '未找到有效用户' });
         }
 
-        // 并行查询下载和上传记录
-        const [downloads, uploads] = await Promise.all([
-            download_records.findAll({
-                where: { user_ID: targetUid },
-                include: [{ model: resources, as: 'resource', attributes: ['title'] }]
-            }),
-            resources.findAll({
-                where: { uploader_ID: targetUid },
-                attributes: ['title', 'upload_Time']
-            })
-        ]);
+        // 2. 直接查询 points_logs 表
+        const logs = await models.points_logs.findAll({
+            where: { user_ID: targetUid },
+            // 🌟 关键修正：数据库字段是大写 T 的 create_Time
+            order: [['create_Time', 'DESC']], 
+            limit: 50 
+        });
 
-        // 格式化下载数据
-        const downloadData = downloads.map(r => ({
-            amount: -(r.deducted_Points || 0),
-            reason: `下载资源：${r.resource?.title || '未知资源'}`,
-            time: r.download_Time || new Date(),
-            type: 'negative'
+        // 3. 格式化输出，严格适配前端 PointDetails.vue 的字段需求
+        const allRecords = logs.map(log => ({
+            // 🌟 关键修正：字段名由 change_amount 改为 amount
+            amount: log.amount, 
+            reason: log.reason,
+            // 🌟 关键修正：将数据库的 create_Time 映射为前端识别的 time
+            time: log.create_Time,
+            // 根据金额正负决定前端显示的颜色类型（红色或绿色）
+            type: log.amount > 0 ? 'positive' : 'negative'
         }));
 
-        // 格式化上传数据（假设每上传一个奖励 10 积分）
-        const uploadData = uploads.map(r => ({
-            amount: 10,
-            reason: `上传资源：${r.title || '未命名'}`,
-            time: r.upload_Time || new Date(),
-            type: 'positive'
-        }));
+        // 4. 返回标准响应格式
+        res.status(200).json({ 
+            code: 200, 
+            data: allRecords 
+        });
 
-        // 合并并按时间倒序
-        const allRecords = [...downloadData, ...uploadData].sort((a, b) => 
-            new Date(b.time) - new Date(a.time)
-        );
-
-        res.status(200).json({ code: 200, data: allRecords });
     } catch (error) {
         console.error("积分接口内部错误:", error);
-        res.status(500).json({ code: 500, message: "后端查询崩溃: " + error.message });
+        res.status(500).json({ 
+            code: 500, 
+            message: "后端查询崩溃: " + error.message 
+        });
     }
 };
 
