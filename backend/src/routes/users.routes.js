@@ -4,6 +4,27 @@ const userController = require('../controllers/userController');
 const resourceController = require('../controllers/resourceController');
 const authMiddleware = require('../middlewares/auth.middleware');
 
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
+
+// users.routes.js 里的 Multer 配置
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    // 🚀 改为根目录下的 uploads，不要 public
+    const uploadDir = 'uploads/'; 
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
+  }
+});
+const upload = multer({ storage });
+
 // --- 1. 基础认证 (公开) ---
 router.post('/login', userController.login);
 router.post('/register', userController.register);
@@ -13,6 +34,8 @@ router.post('/register', userController.register);
 router.get('/profile',userController.getUserProfile);
 router.post('/update', userController.updateProfile);
 router.post('/password', userController.changePassword);
+// 头像上传
+router.post('/upload-avatar', authMiddleware, upload.single('avatar'), userController.updateAvatar);
 // 获取用户统计数据 (上传数、下载数等)
 router.get('/stats', userController.getUserStats);
 

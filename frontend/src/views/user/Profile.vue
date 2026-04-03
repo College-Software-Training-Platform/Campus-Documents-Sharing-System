@@ -117,6 +117,16 @@ const fetchUserData = async () => {
       userInfo.value.points = data.points_Balance
       userInfo.value.avatarUrl = data.avatar_Url
       userInfo.value.userId = data.user_ID 
+// 处理头像显示路径
+  const rawPath = data.avatar_Url
+  if (rawPath) {
+    // 如果数据库存的是相对路径，拼上后端地址；如果是完整 URL 则直接用
+    userInfo.value.avatarUrl = rawPath.startsWith('http') 
+      ? rawPath 
+      : `http://localhost:3000/${rawPath.startsWith('/') ? rawPath.substring(1) : rawPath}`
+  } else {
+    userInfo.value.avatarUrl = defaultAvatar
+  }
 
       // 3. 获取统计数据
       const statsRes = await request.get(`/users/stats`, {

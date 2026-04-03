@@ -159,7 +159,7 @@ const uploadResource = async (req, res) => {
 const getDiscoverTrend = async (req, res) => {
     try {
         const { format, page = 1, limit = 10 } = req.query;
-        const where = { [Sequelize.Op.or]: [{ audit_Status: 'approved' }, { audit_Status: 'pending' }] };
+        const where = { audit_Status: 'approved' };
         if (format && format !== 'all') where.format = format;
 
         const { count, rows } = await resources.findAndCountAll({
@@ -182,44 +182,24 @@ const getDiscoverTrend = async (req, res) => {
  */
 const getPendingResources = async (req, res) => {
     try {
-        const list = await resources.findAll({ 
-            where: { audit_Status: 'pending' },
-            include: [{ model: users, as: 'uploader', attributes: ['name'] }]
+        const list = await resources.findAll({
+            where: { audit_Status: 'pending' }
         });
-        res.json({ code: 200, data: list });
+
+        res.json({
+            code: 200,
+            data: list
+        });
+
     } catch (err) {
         console.error(err);
-        res.status(500).json({ code: 500, message: '获取审核列表失败' });
+        res.status(500).json({
+            code: 500,
+            message: '获取待审核资源失败'
+        });
     }
 };
 
-/**
- * ✅ 统一审核逻辑
- */
-const auditResource = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { status } = req.body; 
-
-        if (!['approved', 'rejected'].includes(status)) {
-            return res.status(400).json({ code: 400, message: '审核状态无效' });
-        }
-
-        const [updated] = await resources.update(
-            { audit_Status: status },
-            { where: { resource_ID: id } }
-        );
-
-        if (updated) {
-            res.json({ code: 200, message: `操作成功，已将资源设置为: ${status}` });
-        } else {
-            res.status(404).json({ code: 404, message: '未找到该资源' });
-        }
-    } catch (err) {
-        console.error('审核失败:', err);
-        res.status(500).json({ code: 500, message: '审核系统故障' });
-    }
-};
 
 /**
  * ✅ 核心逻辑：获取资源详情
@@ -263,6 +243,89 @@ const getCourses = async (req, res) => {
     }
 };
 
+//简单删除接口
+const deleteResource = async (req, res) => {
+    try {
+        const { id } = req.params; 
+        const deleted = await models.resources.destroy({ 
+            where: { resource_ID: id } 
+        });
+
+        if (deleted) {
+            res.status(200).json({ code: 200, message: '删除成功' });
+        } else {
+            res.status(404).json({ code: 404, message: '资源不存在，删除失败' });
+        }
+    } catch (error) {
+        console.error('删除失败:', error);
+        res.status(500).json({ code: 500, message: '删除失败' });
+    }
+};
+
+const auditResource = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { action } = req.body; // approve / reject
+
+        if (action === 'approve') {
+            await approveResource(id);
+            return res.json({ code: 200, message: '操作成功' });
+        } else if (action === 'reject') {
+            await rejectResource(id);
+            return res.json({ code: 200, message: '已驳回' });
+        } else {
+            return res.status(400).json({ code: 400, message: '无效操作' });
+        }
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ code: 500, message: '审核失败' });
+    }
+};
+
+
+const approveResource = async (resourceId) => {
+    await resources.update(
+        { audit_Status: 'approved' },
+        { where: { resource_ID: resourceId } }
+    );
+};
+
+const rejectResource = async (resourceId) => {
+    await resources.update(
+        { audit_Status: 'rejected' },
+        { where: { resource_ID: resourceId } }
+    );
+};
+
+/**
+ * ✅ 核心逻辑：更新资源信息 (目前仅允许修改标题)
+ */
+const updateResource = async (req, res) => {
+    try {
+        const { id } = req.params; // 获取路由中的 resource_ID
+        const { title } = req.body;  // 获取前端传来的新标题
+
+        if (!title || !title.trim()) {
+            return res.status(400).json({ code: 400, message: '资源名称不能为空' });
+        }
+
+        // 执行更新：注意字段名 resource_ID
+        const [updatedRows] = await models.resources.update(
+            { title: title.trim() }, 
+            { where: { resource_ID: id } }
+        );
+
+        if (updatedRows === 1) {
+            res.json({ code: 200, message: '更新成功' });
+        } else {
+            res.status(404).json({ code: 404, message: '资源不存在或未做修改' });
+        }
+    } catch (err) {
+        console.error('更新资源失败:', err);
+        res.status(500).json({ code: 500, message: '服务器内部错误' });
+    }
+};
+
 module.exports = {
     downloadResource,
     uploadResource,
@@ -270,5 +333,7 @@ module.exports = {
     getResourceDetail,
     getPendingResources,
     auditResource,
-    getCourses
+    getCourses,
+    deleteResource,
+    updateResource
 };

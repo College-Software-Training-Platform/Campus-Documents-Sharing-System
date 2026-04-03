@@ -82,8 +82,8 @@ const replyFeedback = async (req, res) => {
 };
 
 module.exports = {
-  getFeedbacks,
-  processFeedback,   // ✅ 新增
-  deleteFeedback,    // ✅ 新增
-  replyFeedback
+  getFeedbacks,//获取列表
+  processFeedback,   // 标记为已处理
+  deleteFeedback,    // 删除
+  replyFeedback//回复
 };

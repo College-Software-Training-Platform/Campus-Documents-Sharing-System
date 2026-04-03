@@ -79,16 +79,45 @@ const statusMap = {
   rejected: { text: '已驳回', tag: 'danger' }
 }
 
+const approve = async (id) => {
+  try {
+    await axios.put(`http://localhost:3000/api/resources/${id}/audit`, {
+      action: 'approve'
+    }, {
+      headers: {
+        Authorization: 'Bearer ' + localStorage.getItem('token')
+      }
+    })
+    fetchList() // 刷新列表
+  } catch (err) {
+    console.error(err)
+  }
+}
+
+const reject = async (id) => {
+  try {
+    await axios.put(`http://localhost:3000/api/resources/${id}/audit`, {
+      action: 'reject'
+    }, {
+      headers: {
+        Authorization: 'Bearer ' + localStorage.getItem('token')
+      }
+    })
+    fetchList()
+  } catch (err) {
+    console.error(err)
+  }
+}
+
 // 获取列表（直接对接后端接口）
 const fetchList = async () => {
   loading.value = true
   try {
     const res = await axios.get('http://localhost:3000/api/resources/pending')
-    // 后端返回数组
-    tableData.value = res.data.map(item => ({
-      ...item,
-      audit_Status: item.audit_Status || item.audit_Status // 确保字段正确
-    }))
+
+    // ✅ 正确写法
+    tableData.value = res.data.data || []
+
   } catch (err) {
     ElMessage.error('获取列表失败')
     console.error(err)
@@ -98,25 +127,33 @@ const fetchList = async () => {
 }
 
 // 审核操作
-const handleAudit = (row, status) => {
-  const actionText = status === 'approved' ? '通过' : '驳回'
-  ElMessageBox.confirm(`确定要${actionText}资源《${row.title}》吗？`, '提示', {
-    confirmButtonText: '确定',
-    cancelButtonText: '取消',
-    type: status === 'approved' ? 'success' : 'warning'
-  }).then(async () => {
-    try {
-      await axios.put(`http://localhost:3000/api/resources/${row.resource_ID}/audit`, {
-        status
-      })
+const handleAudit = async (row, status) => {
+  try {
+    const res = await axios.put(
+      `http://localhost:3000/api/resources/${row.resource_ID}/audit`,
+      {
+        action: status === 'approved' ? 'approve' : 'reject'
+      },
+      {
+        headers: {
+          Authorization: 'Bearer ' + localStorage.getItem('token')
+        }
+      }
+    )
+
+    if (res.data.code === 200) {
       ElMessage.success('操作成功')
       fetchList()
-    } catch (err) {
-      console.error(err)
-      ElMessage.error('操作失败')
+    } else {
+      ElMessage.error(res.data.message)
     }
-  })
+
+  } catch (err) {
+    console.error(err)
+    ElMessage.error('请求失败（大概率是没登录）')
+  }
 }
+
 
 // 查看详情（打开文件路径）
 const viewDetail = (row) => {
@@ -136,4 +173,7 @@ onMounted(() => {
 .filter-card {
   margin-bottom: 20px;
 }
+
+
 </style>
+

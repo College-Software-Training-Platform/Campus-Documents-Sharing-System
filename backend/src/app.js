@@ -8,9 +8,13 @@ const cors = require('cors');
 const app = express();
 const PORT = 3000;
 
+app.use(cors())
+
 // 中间件配置
 app.use(cors());
 app.use(express.json());
+
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // --- 路由挂载区 ---
 const usersRouter = require('./routes/users.routes'); 

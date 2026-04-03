@@ -93,7 +93,9 @@ const handleLogin = async () => {
       // 存储 Token 和用户信息
       localStorage.setItem('token', res.data.token)
       localStorage.setItem('user', JSON.stringify(res.data.user))
+      localStorage.setItem('studentId', res.data.user.account)
       
+
       // 根据角色跳转
       if (res.data.user.role === 'admin') {
         router.push('/admin')

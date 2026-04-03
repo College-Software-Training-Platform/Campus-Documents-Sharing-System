@@ -18,11 +18,13 @@ if (!fs.existsSync(uploadDir)) {
 
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
-        cb(null, uploadDir); 
+        cb(null, 'uploads/'); // 确保根目录有 uploads 文件夹
     },
     filename: (req, file, cb) => {
+        // 🚀 核心：确保文件名包含时间戳和原始后缀名
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        cb(null, uniqueSuffix + path.extname(file.originalname));
+        // path.extname(file.originalname) 会获取 .jpg 或 .png
+        cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
     }
 });
 
@@ -45,9 +47,14 @@ router.post('/upload', authMiddleware, upload.single('file'), ResourceController
 // 下载资源
 router.post('/download', authMiddleware, ResourceController.downloadResource);
 // 获取待审核列表
-router.get('/pending', authMiddleware, ResourceController.getPendingResources);
+//router.get('/pending', authMiddleware, ResourceController.getPendingResources);
+router.get('/pending', ResourceController.getPendingResources);
 // 审核资源 (通过/驳回)
 router.put('/:id/audit', authMiddleware, ResourceController.auditResource);
+// 资料删除
+router.delete('/:id', authMiddleware, ResourceController.deleteResource);
+// 资料更新
+router.put('/:id', authMiddleware, ResourceController.updateResource);
 
 // 3.3 详情查询 (必须放在最后，防止 :id 拦截其他静态路径)
 router.get('/:id', ResourceController.getResourceDetail);
