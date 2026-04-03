@@ -42,7 +42,11 @@ exports.searchResources = async (req, res) => {
       });
     }
 
-    if (category === 'exam') {
+    if (category === 'course') {
+      andConditions.push({
+        course_ID: { [Op.ne]: null }
+      });
+    } else if (category === 'exam') {
       andConditions.push({
         [Op.or]: [
           { title: { [Op.like]: '%真题%' } },

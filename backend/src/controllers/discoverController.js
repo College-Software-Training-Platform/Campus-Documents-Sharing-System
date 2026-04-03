@@ -26,12 +26,7 @@ exports.getDiscoverTrend = async (req, res) => {
     const limit = Math.max(parseInt(req.query.limit, 10) || 10, 1);
     const offset = (page - 1) * limit;
 
-    const where = { 
-      [Op.or]: [
-        { audit_Status: 'approved' },
-        { audit_Status: 'pending' }
-      ]
-    };
+    const where = { audit_Status: 'approved' };
     if (format !== 'all') {
       where.format = format;
     }
