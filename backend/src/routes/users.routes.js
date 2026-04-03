@@ -36,7 +36,7 @@ router.get('/stats', userController.getUserStats);
 router.get('/resources', userController.getMyResources);
 router.get('/downloads', userController.getMyDownloads);
 router.get('/favorites', userController.getMyFavorites);
-router.get('/points', userController.getPointDetails);
+router.get('/points/details', userController.getPointDetails);
 
 /**
  * ✅ 4. 下载动作 (扣积分)

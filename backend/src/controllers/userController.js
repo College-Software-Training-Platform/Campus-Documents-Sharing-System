@@ -307,28 +307,55 @@ exports.getMyFavorites = async (req, res) => {
  */
 exports.getPointDetails = async (req, res) => {
     try {
-        const { userId, studentId } = req.query;
-        let targetUid = userId || await getInternalUid(studentId);
+        const { studentId, userId } = req.query;
+        let targetUid = userId;
 
-        const records = await download_records.findAll({
-            where: { user_ID: targetUid },
-            include: [{
-                model: resources,
-                as: 'resource',
-                attributes: ['title']
-            }],
-            order: [['download_Time', 'DESC']]
-        });
+        // 如果只有学号，先查 UID
+        if (!targetUid && studentId) {
+            const user = await users.findOne({ where: { account: studentId } });
+            targetUid = user ? user.user_ID : null;
+        }
 
-        const data = records.map(r => ({
-            amount: -r.deducted_Points,
-            reason: r.resource ? `下载资源：${r.resource.title}` : '下载资源',
-            time: r.download_Time
+        if (!targetUid) {
+            return res.status(200).json({ code: 200, data: [], message: '未找到有效用户' });
+        }
+
+        // 并行查询下载和上传记录
+        const [downloads, uploads] = await Promise.all([
+            download_records.findAll({
+                where: { user_ID: targetUid },
+                include: [{ model: resources, as: 'resource', attributes: ['title'] }]
+            }),
+            resources.findAll({
+                where: { uploader_ID: targetUid },
+                attributes: ['title', 'upload_Time']
+            })
+        ]);
+
+        // 格式化下载数据
+        const downloadData = downloads.map(r => ({
+            amount: -(r.deducted_Points || 0),
+            reason: `下载资源：${r.resource?.title || '未知资源'}`,
+            time: r.download_Time || new Date(),
+            type: 'negative'
         }));
 
-        res.status(200).json({ code: 200, data: data });
+        // 格式化上传数据（假设每上传一个奖励 10 积分）
+        const uploadData = uploads.map(r => ({
+            amount: 10,
+            reason: `上传资源：${r.title || '未命名'}`,
+            time: r.upload_Time || new Date(),
+            type: 'positive'
+        }));
+
+        // 合并并按时间倒序
+        const allRecords = [...downloadData, ...uploadData].sort((a, b) => 
+            new Date(b.time) - new Date(a.time)
+        );
+
+        res.status(200).json({ code: 200, data: allRecords });
     } catch (error) {
-        console.error("获取积分失败:", error);
-        res.status(500).json({ code: 500, message: '获取积分失败' });
+        console.error("积分接口内部错误:", error);
+        res.status(500).json({ code: 500, message: "后端查询崩溃: " + error.message });
     }
 };
