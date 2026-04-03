@@ -3,15 +3,8 @@ import * as resourceApi from '@/api/resources'
 
 export const useResourceStore = defineStore('resource', {
   state: () => ({
-    // 静态 mock 数据（保留用于离线测试）
-    resources: [
-      { resourceId: 201, title: '2024年高等数学期末真题及解析', course: '高等数学', format: 'pdf', downloads: 1250, rating: 4.8, points: 15 },
-      { resourceId: 202, title: '数据结构与算法完整笔记', course: '数据结构', format: 'docx', downloads: 980, rating: 4.7, points: 12 },
-      { resourceId: 203, title: '深度学习入门教程（含代码）', course: '机器学习', format: 'zip', downloads: 856, rating: 4.9, points: 20 },
-      { resourceId: 204, title: '操作系统原理讲义', course: '操作系统', format: 'pdf', downloads: 742, rating: 4.6, points: 10 },
-      { resourceId: 205, title: '计算机网络知识点总结', course: '计算机网络', format: 'docx', downloads: 698, rating: 4.5, points: 8 },
-      { resourceId: 206, title: '数据库设计案例集', course: '数据库', format: 'pdf', downloads: 645, rating: 4.7, points: 12 }
-    ],
+    // 基础资源列表 (保留作为本地缓存)
+    resources: [],
     
     // 发现趋势数据
     discoverTrend: {
@@ -37,10 +30,27 @@ export const useResourceStore = defineStore('resource', {
       data: [],
       loading: false,
       pagination: { total: 0, page: 1, limit: 10, pages: 0 }
-    }
+    },
+
+    // 当前详情资源
+    currentResource: null
   }),
 
   actions: {
+    /**
+     * 获取单个资源详情
+     */
+    async fetchResourceById(id) {
+      if (!id) return
+      try {
+        const response = await resourceApi.getResourceDetail(id)
+        this.currentResource = response.data
+        return response.data
+      } catch (err) {
+        console.error('获取资源详情失败:', err)
+        this.currentResource = null
+      }
+    },
     /**
      * 添加资源（发布时使用）
      */
@@ -68,10 +78,11 @@ export const useResourceStore = defineStore('resource', {
         
         this.discoverTrend.data = response.data || []
         this.discoverTrend.pagination = response.pagination || {}
+        // 同步到基础列表
+        this.resources = this.discoverTrend.data
       } catch (err) {
         console.error('获取趋势资源失败:', err)
-        // 降级到 mock 数据
-        this.discoverTrend.data = this.resources
+        this.discoverTrend.data = []
       } finally {
         this.discoverTrend.loading = false
       }

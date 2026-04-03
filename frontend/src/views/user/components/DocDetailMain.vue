@@ -8,18 +8,18 @@
       </div>
       <h1 class="doc-title">{{ resource?.title || '资源加载中...' }}</h1>
       <div class="meta-info">
-        <span class="meta-item"><el-icon><Calendar /></el-icon> 发布于 2023-12-01</span>
-        <span class="meta-item"><el-icon><View /></el-icon> {{ resource?.downloads || 0 }} 次浏览</span>
-        <span class="meta-item rating"><el-icon color="#f59e0b"><StarFilled /></el-icon> {{ resource?.rating || '5.0' }} <span class="rating-count">(128个评分)</span></span>
+        <span class="meta-item"><el-icon><Calendar /></el-icon> 发布于 {{ formatDate(resource?.upload_Time) }}</span>
+        <span class="meta-item"><el-icon><View /></el-icon> {{ resource?.download_Count || 0 }} 次浏览</span>
+        <span class="meta-item rating"><el-icon color="#f59e0b"><StarFilled /></el-icon> 5.0 <span class="rating-count">(已审核)</span></span>
       </div>
     </div>
 
     <!-- 封面图预览 -->
     <div class="cover-preview">
-      <div class="cover-placeholder">
-        <h2>Machine Learning</h2>
-        <h2>Study Guide</h2>
-        <el-button round class="preview-btn"><el-icon><FullScreen /></el-icon> 预览全部页面 (45页)</el-button>
+      <div class="cover-placeholder" :class="resource?.format">
+        <h2>{{ resource?.course?.course_Name || 'Campus' }}</h2>
+        <h2>{{ resource?.format?.toUpperCase() || 'FILE' }}</h2>
+        <el-button round class="preview-btn"><el-icon><FullScreen /></el-icon> 资源预览</el-button>
       </div>
     </div>
 
@@ -28,13 +28,13 @@
     <div class="detail-description">
       <h3 class="section-title"><span class="title-indicator"></span> 摘要</h3>
       <div class="desc-content">
-        {{ resource?.description || '暂无摘要' }}
+        {{ resource?.ai_Summary || resource?.description || '暂无详细摘要' }}
       </div>
       <div class="hash-tags">
         <CommonTag 
           v-for="tag in resource?.tags" 
-          :key="tag" 
-          :text="'#' + tag" 
+          :key="tag.tag_Name" 
+          :text="'#' + tag.tag_Name" 
         />
       </div>
     </div>
@@ -43,9 +43,9 @@
 
 <script setup>
 import { 
-  Calendar, View, StarFilled, FullScreen, MagicStick
+  Calendar, View, StarFilled, FullScreen
 } from '@element-plus/icons-vue'
-import { computed } from 'vue'
+import { computed, onMounted } from 'vue'
 import { useResourceStore } from '@/store/resource'
 import CommonTag from './CommonTag.vue'
 
@@ -57,8 +57,15 @@ const props = defineProps({
 })
 
 const resourceStore = useResourceStore()
-const resource = computed(() => {
-  return resourceStore.resources.find(r => r.resourceId == props.resourceId)
+const resource = computed(() => resourceStore.currentResource)
+
+const formatDate = (dateStr) => {
+  if (!dateStr) return '未知'
+  return new Date(dateStr).toLocaleDateString()
+}
+
+onMounted(() => {
+  resourceStore.fetchResourceById(props.resourceId)
 })
 </script>
 

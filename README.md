@@ -23,15 +23,15 @@ Campus-Documents-Sharing-System/
 │   ├── src/
 │   │   ├── config/       # 配置相关 (如 database.js 数据库连接)
 │   │   ├── controllers/  # 控制层逻辑
-│   │   ├── middlewares/  # 中间件接口拦截器
-│   │   ├── models/       # 数据库模型 (Sequelize)
-│   │   ├── routes/       # API 路由
+│   │   ├── middlewares/  # 中间件接口拦截器 (Auth, Upload 等)
+│   │   ├── models/       # 数据库模型 (Sequelize Models)
+│   │   ├── routes/       # API 路由划分
 │   │   ├── utils/        # 工具函数
 │   │   └── app.js        # 后端入口文件
-│   ├── .env              # (不要提交到 Git) 本地环境变量
+│   ├── .env              # 本地环境变量配置
 │   └── package.json      # 后端依赖配置
 │
-├── database.sql          # MySQL 初始建表脚本
+├── database.sql          # MySQL 初始建表与基础数据脚本
 ├── README.md             # 本项目说明文档
 └── .gitignore            # Git 忽略配置
 ```
@@ -49,28 +49,28 @@ Campus-Documents-Sharing-System/
 
 ### 1. 前端架构 (Vue 3 单页面应用)
 
-前端采用 **Vite 构建**，以 **Vue 3 (Composition API)** 为核心。
-主要选型：
+前端采用 **Vite** 作为构建工具，构建了一个响应式、高性能的单页面应用 (SPA)。
+主要选型与核心功能：
 
-- **UI 组件库**: Element Plus（提供表单、弹窗、布局等后台组件支持）。
-- **路由控制**: Vue Router 4（分为用户端、管理端及公共页面）。
-- **状态管理**: Pinia（轻量级、直观的全局状态维护）。
-- **网络请求**: Axios（具有统一的鉴权 Token 拦截机制）。
+- **UI 组件库**: **Element Plus**，提供一致的视觉风格与丰富的交互组件。
+- **状态管理**: **Pinia**，负责全局用户状态、积分信息及配置缓存。
+- **路由控制**: **Vue Router 4**，实现基于角色的动态导航方案。
+- **数据交互**: **Axios**，封装统一的请求拦截器处理 JWT 鉴权与报错提示。
+- **数据可视化**: **Chart.js**，用于展示个人/系统资源趋势。
+- **核心功能**:
+  - **发现频道**: 支持标签墙搜索、热门资料排行榜、全站模糊检索。
+  - **资料详情**: AI 辅助摘要显示（模拟）、评论互动、资源预览。
+  - **上传系统**: 支持拖拽上传，自定义学科标签与积分售价设置。
 
-**🔗 路由规划概览：**
+### 2. 后端架构 (Node.js & RESTful API)
 
-- 公共路由：`/login`, `/register`
-- 用户端：`/home` (首页), `/discover/tags`, `/discover/trending`, `/search`, `/resource/:id`, `/publish`, `/profile/`
-- 管理端：`/admin` (首页看板), `/admin/users` (用户管理), `/admin/resources` (资源审核), `/admin/settings` (系统配置)
+后端基于 **Express** 框架，遵循 MVC 设计模式提供健壮的接口支持。
+主要技术细节：
 
-### 2. 后端架构 (Node.js 服务端)
-
-采用 **Express** 框架提供稳定 RESTful API 服务。
-主要机制：
-
-- **ORM 数据操作**: Sequelize (封装所有 MySQL 的查询与关联)。
-- **身份认证机制**: JWT + bcrypt (保障接口调用与密码校验安全)。
-- **文件上传服务**: Multer (处理用户发布的附件资料并存储在服务器/云端)。
+- **ORM 映射**: **Sequelize**，优雅地管理 MySQL 查询、事务处理与表关联。
+- **安全认证**: **JWT (JSON Web Token)** 用于无状态认证，**bcrypt** 处理密码哈希加密。
+- **文件存储**: **Multer** 负责处理多媒体/文档流上传，并持久化到服务器本地存储。
+- **中间件**: 包含权限验证鉴权、日志记录、错误统一处理。
 
 ### 3. 数据表核心设计 (MySQL ER 图实现)
 
@@ -121,6 +121,7 @@ DB_USER=root
 DB_PASSWORD=你的真实数据库密码
 DB_NAME=campus_sharing_system
 JWT_SECRET=随意设置一个秘钥字符串即可
+ZHIPU_API_KEY=你的智谱API密钥
 ```
 
 启动后端服务器：
@@ -133,7 +134,7 @@ node src/app.js
 
 ### 3. 启动前端应用 (Frontend)
 
-请再新开一个独立的终端窗口。
+请再新开一个独立的终端窗口：
 
 ```bash
 cd frontend
@@ -145,4 +146,4 @@ npm install
 npm run dev
 ```
 
-启动后，终端会显示本地访问地址（例如 `http://localhost:5173/`）。您直接 `Ctrl + 单击` 或在浏览器粘贴打开即可！
+启动后，终端会显示本地访问地址（例如 `http://localhost:5173/`）。直接 `Ctrl + 单击` 或在浏览器粘贴打开即可！

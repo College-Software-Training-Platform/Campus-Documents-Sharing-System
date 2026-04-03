@@ -1,60 +1,89 @@
-// backend/src/controllers/feedbackController.js
+// backend/src/controllers/feedbackController.js 
 const Sequelize = require('sequelize');
 const sequelize = require('../config/database');
 const FeedbackModel = require('../models/feedbacks')(sequelize, Sequelize.DataTypes);
 
-// 获取所有反馈
-const getFeedbacks = async () => {
+// ✅ 获取所有反馈
+const getFeedbacks = async (req, res) => {
   try {
     const feedbacks = await FeedbackModel.findAll();
-    return feedbacks.map(f => f.toJSON());
+    res.json(feedbacks);
   } catch (err) {
     console.error(err);
-    throw err;
+    res.status(500).json({ message: '获取失败' });
   }
 };
 
-// 处理反馈
-const processFeedback = async (feedbackId) => {
+// ✅ 标记已处理
+const processFeedback = async (req, res) => {
   try {
-    await FeedbackModel.update(
+    const { id } = req.params;
+
+    const result = await FeedbackModel.update(
       { status: 'processed' },
-      { where: { id: feedbackId } }
+      { where: { feedback_ID: id } }  // 🔥 必须改这里
     );
-    console.log(`反馈 ${feedbackId} 已处理`);
+
+    if (result[0] === 0) {
+      return res.status(404).json({ message: '反馈不存在' });
+    }
+
+    res.json({ message: '已标记为处理' });
+
   } catch (err) {
     console.error(err);
+    res.status(500).json({ message: '处理失败' });
   }
 };
 
-// 删除反馈
-const deleteFeedback = async (feedbackId) => {
+// ✅ 删除
+const deleteFeedback = async (req, res) => {
   try {
-    await FeedbackModel.destroy({ where: { id: feedbackId } });
-    console.log(`反馈 ${feedbackId} 已删除`);
+    const { id } = req.params;
+
+    const result = await FeedbackModel.destroy({
+      where: { feedback_ID: id }  // 🔥 必须改
+    });
+
+    if (!result) {
+      return res.status(404).json({ message: '反馈不存在' });
+    }
+
+    res.json({ message: '删除成功' });
+
   } catch (err) {
     console.error(err);
+    res.status(500).json({ message: '删除失败' });
   }
 };
 
-const replyFeedback = async (feedbackId, replyContent) => {
+// ✅ 回复（顺便修）
+const replyFeedback = async (req, res) => {
   try {
+    const { id } = req.params;
+    const { replyContent } = req.body;
+
     await FeedbackModel.update(
       {
         reply_Content: replyContent,
         status: 'processed'
       },
       {
-        where: { feedback_ID: feedbackId }
+        where: { feedback_ID: id } // 🔥 统一
       }
     );
-    console.log(`反馈 ${feedbackId} 已回复`);
+
+    res.json({ message: '回复成功' });
+
   } catch (err) {
     console.error(err);
+    res.status(500).json({ message: '回复失败' });
   }
 };
 
 module.exports = {
   getFeedbacks,
+  processFeedback,   // ✅ 新增
+  deleteFeedback,    // ✅ 新增
   replyFeedback
 };

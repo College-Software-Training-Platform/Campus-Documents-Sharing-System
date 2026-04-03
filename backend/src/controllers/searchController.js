@@ -37,7 +37,7 @@ exports.searchResources = async (req, res) => {
           { extracted_Text: { [Op.like]: `%${keyword}%` } },
           sequelize.where(sequelize.col('course.course_Name'), { [Op.like]: `%${keyword}%` }),
           sequelize.where(sequelize.col('uploader.name'), { [Op.like]: `%${keyword}%` }),
-          sequelize.where(sequelize.col('tag_ID_tags.tag_Name'), { [Op.like]: `%${keyword}%` })
+          sequelize.where(sequelize.col('tags.tag_Name'), { [Op.like]: `%${keyword}%` })
         ]
       });
     }
@@ -89,7 +89,7 @@ exports.searchResources = async (req, res) => {
         },
         {
           model: tags,
-          as: 'tag_ID_tags',
+          as: 'tags',
           attributes: ['tag_ID', 'tag_Name'],
           through: { attributes: [] },
           required: false

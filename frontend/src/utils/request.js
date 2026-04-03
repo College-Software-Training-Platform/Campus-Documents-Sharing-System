@@ -27,6 +27,11 @@ service.interceptors.request.use(
 // 响应拦截器
 service.interceptors.response.use(
     response => {
+        // 如果是 Blob 类型，说明是文件下载，直接返回
+        if (response.data instanceof Blob) {
+            return response.data;
+        }
+
         const res = response.data;
         // 如果后端返回的状态码不是 200 或 201，则判定为错误 (根据你的业务逻辑调整)
         if (res.code && res.code !== 200 && res.code !== 201) {

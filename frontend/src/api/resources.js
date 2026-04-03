@@ -44,14 +44,34 @@ export const getHotTags = (limit = 6) => {
   });
 };
 
-/**
- * 多条件搜索资源
- * @param {Object} params - { q, category, sort, page, limit }
- */
 export const searchResources = (params) => {
   return request({
     url: '/resources/search',
     method: 'get',
     params
+  });
+};
+
+/**
+ * 获取资源详细信息
+ * @param {number|string} resourceId 
+ */
+export const getResourceDetail = (resourceId) => {
+  return request({
+    url: `/resources/${resourceId}`,
+    method: 'get'
+  });
+};
+
+/**
+ * 下载资源 (获取文件流)
+ * @param {number|string} resourceId 
+ */
+export const downloadResource = (resourceId) => {
+  return request({
+    url: '/resources/download',
+    method: 'post',
+    data: { resourceId },
+    responseType: 'blob' // 必须设置为 blob 才能处理二进制流
   });
 };

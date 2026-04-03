@@ -8,6 +8,7 @@
           drag
           action="#"
           :auto-upload="false"
+          :on-change="handleFileChange"
           multiple
         >
           <el-icon class="el-icon--upload"><UploadFilled /></el-icon>
@@ -31,16 +32,12 @@
       <!-- 分类与标签 -->
       <el-row :gutter="24" class="mt-4">
         <el-col :span="12">
-          <el-form-item label="所属课程/分类">
-            <el-select 
-              v-model="publishForm.category" 
-              placeholder="请选择课程分类" 
+          <el-form-item label="所属课程">
+            <el-input 
+              v-model="publishForm.courseName" 
+              placeholder="请输入所属课程名称，如：高等数学" 
               size="large" 
-              class="full-width"
-            >
-              <el-option label="计算机科学" value="cs" />
-              <el-option label="高等数学" value="math" />
-            </el-select>
+            />
           </el-form-item>
         </el-col>
         <el-col :span="12">
@@ -94,13 +91,13 @@
       <el-form-item label="下载所需积分" class="mt-4 points-item">
         <el-input-number 
           v-model="publishForm.points" 
-          :min="0" :max="10" 
+          :min="0" :max="100" 
           size="large"
           controls-position="right"
           class="points-input"
         />
         <span class="points-unit">积分</span>
-        <div class="points-tip">建议定价：0-10 积分</div>
+        <div class="points-tip">建议定价：0-50 积分</div>
       </el-form-item>
 
       <!-- 协议勾选 -->
@@ -113,7 +110,14 @@
       <!-- 底部按钮 -->
       <div class="form-actions">
         <el-button size="large" class="cancel-btn">取消</el-button>
-        <el-button type="primary" size="large" class="submit-btn" :icon="Position" @click="handleSubmit">
+        <el-button 
+          type="primary" 
+          size="large" 
+          class="submit-btn" 
+          :icon="Position" 
+          @click="handleSubmit"
+          :loading="submitLoading"
+        >
           立即发布
         </el-button>
       </div>
@@ -124,19 +128,19 @@
 <script setup>
 import { ref, reactive } from 'vue'
 import { UploadFilled, MagicStick, Position } from '@element-plus/icons-vue'
-import axios from 'axios'
 import { ElMessage } from 'element-plus'
-import { useResourceStore } from '@/store/resource'
 import { useRouter } from 'vue-router'
 import CommonTag from './CommonTag.vue'
+import request from '@/utils/request' // 使用自定义请求工具（含 Token）
 
-const resourceStore = useResourceStore()
 const router = useRouter()
 const aiLoading = ref(false)
+const submitLoading = ref(false)
+const selectedFile = ref(null)
 
 const publishForm = reactive({
   title: '',
-  category: '',
+  courseName: '',
   tags: [],
   description: '',
   points: 0,
@@ -144,6 +148,10 @@ const publishForm = reactive({
 })
 
 const tagInput = ref('')
+
+const handleFileChange = (file) => {
+  selectedFile.value = file.raw
+}
 
 const addTag = () => {
   if (tagInput.value.trim() && !publishForm.tags.includes(tagInput.value.trim())) {
@@ -156,37 +164,42 @@ const removeTag = (tag) => {
   publishForm.tags = publishForm.tags.filter(t => t !== tag)
 }
 
-// AI 生成摘要逻辑
+// AI 生成摘要逻辑 (保持现有逻辑，仅更换请求工具)
 const generateAISummary = async () => {
-  if (!publishForm.title || !publishForm.title.trim()) {
+  if (!publishForm.title.trim()) {
     ElMessage.warning('请输入标题后，AI 才能根据标题生成描述')
     return
   }
 
   aiLoading.value = true
   try {
-    // 调用后端 API
-    const response = await axios.post('http://localhost:3000/api/ai/generate-summary', {
+    const response = await request.post('/ai/generate-summary', {
       title: publishForm.title.trim()
     })
 
-    if (response.data.success) {
-      publishForm.description = response.data.summary
+    if (response.success) {
+      publishForm.description = response.summary
       ElMessage.success('摘要已成功生成')
     }
   } catch (error) {
     console.error('AI Summary Error:', error)
-    const errorMsg = error.response?.data?.message || '网络连接超时或后端服务未启动'
-    ElMessage.error(errorMsg)
   } finally {
     aiLoading.value = false
   }
 }
 
-const handleSubmit = () => {
+const handleSubmit = async () => {
   // 1. 基础校验
+  if (!selectedFile.value) {
+    ElMessage.warning('请先选择要上传的文件')
+    return
+  }
   if (!publishForm.title.trim()) {
     ElMessage.warning('请输入资源标题')
+    return
+  }
+  if (!publishForm.courseName.trim()) {
+    ElMessage.warning('请输入所属课程')
     return
   }
   if (!publishForm.agreement) {
@@ -194,26 +207,33 @@ const handleSubmit = () => {
     return
   }
 
-  // 2. 构造数据对象
-  const newResource = {
-    title: publishForm.title,
-    course: publishForm.category === 'cs' ? '计算机科学' : (publishForm.category === 'math' ? '高等数学' : '未分类'),
-    format: 'pdf', // 暂时固定，等文件上传实现后再动态获取
-    points: publishForm.points,
-    tags: [...publishForm.tags],
-    description: publishForm.description
-  }
+  submitLoading.value = true
+  
+  // 2. 构造 FormData 用于文件上传
+  const formData = new FormData()
+  formData.append('file', selectedFile.value)
+  formData.append('title', publishForm.title)
+  formData.append('courseName', publishForm.courseName)
+  formData.append('tags', JSON.stringify(publishForm.tags))
+  formData.append('description', publishForm.description)
+  formData.append('points', publishForm.points)
 
-  // 3. 调用 Store 新增资源
+  // 3. 调用后端 API
   try {
-    resourceStore.addResource(newResource)
-    ElMessage.success('资源发布成功！')
-    
-    // 4. 跳转到发现页
-    router.push('/user/DiscoverTrend')
+    const res = await request.post('/resources/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+
+    if (res.code === 201) {
+      ElMessage.success('资源发布成功，正在跳转发现页...')
+      setTimeout(() => {
+        router.push('/user/DiscoverTrend')
+      }, 1500)
+    }
   } catch (error) {
-    ElMessage.error('发布失败，请稍后重试')
     console.error('Publish Error:', error)
+  } finally {
+    submitLoading.value = false
   }
 }
 </script>

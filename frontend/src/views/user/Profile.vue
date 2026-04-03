@@ -61,7 +61,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import axios from 'axios'
+import request from '@/utils/request'
 
 // 组件引入
 import MyUploads from './components/MyUploads.vue' 
@@ -104,12 +104,12 @@ const fetchUserData = async () => {
     const targetStudentId = currentUser.account || '2024214283'; 
     
     // 2. 获取基础资料
-    const profileRes = await axios.get(`http://localhost:3000/api/users/profile`, {
+    const profileRes = await request.get(`/users/profile`, {
       params: { studentId: targetStudentId }
     })
 
-    if (profileRes.data.code === 200) {
-      const data = profileRes.data.data
+    if (profileRes.code === 200) {
+      const data = profileRes.data
       
       userInfo.value.nickname = data.name || '未设置昵称'
       userInfo.value.bio = data.bio || '这位同学很懒，什么都没写'
@@ -119,12 +119,12 @@ const fetchUserData = async () => {
       userInfo.value.userId = data.user_ID 
 
       // 3. 获取统计数据
-      const statsRes = await axios.get(`http://localhost:3000/api/users/stats`, {
+      const statsRes = await request.get(`/users/stats`, {
         params: { userId: data.user_ID }
       })
-      if (statsRes.data.code === 200) {
-        userInfo.value.uploadCount = statsRes.data.data.uploadCount
-        userInfo.value.downloadCount = statsRes.data.data.downloadCount
+      if (statsRes.code === 200) {
+        userInfo.value.uploadCount = statsRes.data.uploadCount
+        userInfo.value.downloadCount = statsRes.data.downloadCount
       }
     } else {
       userInfo.value.nickname = '查无此人';

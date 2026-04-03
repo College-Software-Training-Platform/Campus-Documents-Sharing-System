@@ -20,8 +20,8 @@ function initModels(sequelize) {
   const tags = _tags(sequelize, DataTypes);
   const users = _users(sequelize, DataTypes);
 
-  resources.belongsToMany(tags, { as: 'tag_ID_tags', through: resource_tag_map, foreignKey: "resource_ID", otherKey: "tag_ID" });
-  tags.belongsToMany(resources, { as: 'resource_ID_resources', through: resource_tag_map, foreignKey: "tag_ID", otherKey: "resource_ID" });
+  resources.belongsToMany(tags, { as: 'tags', through: resource_tag_map, foreignKey: "resource_ID", otherKey: "tag_ID" });
+  tags.belongsToMany(resources, { as: 'resources', through: resource_tag_map, foreignKey: "tag_ID", otherKey: "resource_ID" });
   resources.belongsTo(courses, { as: "course", foreignKey: "course_ID"});
   courses.hasMany(resources, { as: "resources", foreignKey: "course_ID"});
   download_records.belongsTo(resources, { as: "resource", foreignKey: "resource_ID"});

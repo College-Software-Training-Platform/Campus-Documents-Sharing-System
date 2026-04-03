@@ -25,6 +25,15 @@ app.use('/api/feedbacks', feedbackRouter);
 const aiRoute = require('./routes/aiRoute');
 app.use('/api/ai', aiRoute);
 
+// --- 全局错误处理 ---
+app.use((err, req, res, next) => {
+  console.error('SERVER_ERROR:', err.stack);
+  res.status(err.status || 500).json({
+    code: err.status || 500,
+    message: err.message || '服务器内部错误'
+  });
+});
+
 // --- 服务器启动 ---
 // 只保留一个监听器
 app.listen(PORT, () => {

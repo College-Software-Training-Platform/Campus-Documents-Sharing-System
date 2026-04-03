@@ -32,6 +32,8 @@ backend/.env.*
 # Testing (local only)
 backend/tests/
 
+backend/uploads/
+
 # -------- AI Context (local only, do not commit) --------
 AI_context/
 
