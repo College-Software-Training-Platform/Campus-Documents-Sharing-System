@@ -159,7 +159,7 @@ const uploadResource = async (req, res) => {
 const getDiscoverTrend = async (req, res) => {
     try {
         const { format, page = 1, limit = 10 } = req.query;
-        const where = { [Sequelize.Op.or]: [{ audit_Status: 'approved' }, { audit_Status: 'pending' }] };
+        const where = { audit_Status: 'approved' };
         if (format && format !== 'all') where.format = format;
 
         const { count, rows } = await resources.findAndCountAll({
@@ -222,6 +222,15 @@ const getResourceDetail = async (req, res) => {
 
         if (!resource) {
             return res.status(404).json({ code: 404, message: '资源不存在' });
+        }
+
+        // 权限校验：如果不是已通过状态，则只有上传者或管理员可以查看
+        if (resource.audit_Status !== 'approved') {
+            const currentUserId = req.user?.userId;
+            const currentUserRole = req.user?.role;
+            if (resource.uploader_ID !== currentUserId && currentUserRole !== 'admin') {
+                return res.status(403).json({ code: 403, message: '该资源审核中或已被驳回，暂无权查看' });
+            }
         }
 
         res.json({ code: 200, data: resource });
