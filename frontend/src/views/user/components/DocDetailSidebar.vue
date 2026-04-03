@@ -37,7 +37,7 @@
         <el-avatar :size="50" :src="resource?.uploader?.avatar_Url || 'https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png'" />
         <div class="author-details">
           <h4>{{ resource?.uploader?.name || '未知用户' }}</h4>
-          <span>{{ resource?.course?.college || '校友' }}</span>
+          <span>{{ formatCollege(resource?.course) }}</span>
         </div>
         <el-button class="follow-btn" type="primary" plain size="small">关注</el-button>
       </div>
@@ -98,71 +98,100 @@ const resource = computed(() => resourceStore.currentResource)
 const downloadLoading = ref(false)
 
 /**
+ * ✅ 格式化学院显示
+ * 解决后端返回 JSON 字符串导致前端显示 { "college": "xxx" } 的问题
+ */
+const formatCollege = (courseData) => {
+  if (!courseData) return '校友';
+  if (typeof courseData === 'string') {
+    try {
+      const parsed = JSON.parse(courseData);
+      return parsed.college || '校友';
+    } catch (e) {
+      return '校友';
+    }
+  }
+  return courseData.college || '校友';
+}
+
+/**
  * ✅ 核心逻辑：积分下载
- * 100% 对齐 MyUploads.vue 的成功调用链路
  */
 const handleDownload = async () => {
   try {
     const points = resource.value?.required_Points || 0
+    
+    // 1. 二次确认
     await ElMessageBox.confirm(
       `下载该资源将扣除 ${points} 积分，是否确认？`,
       '下载确认',
-      { confirmButtonText: '确认下载', cancelButtonText: '取消', type: 'warning' }
+      {
+        confirmButtonText: '确认下载',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
     )
 
     downloadLoading.value = true
 
-    // 1. 发起请求
+    // 2. 发起 POST 请求
     const res = await request({
-      url: '/users/download-action', // 对应 app.js 中的 app.use('/api/users', ...)
+      url: '/users/download-action', 
       method: 'post',
-      data: { resourceId: Number(props.resourceId) },
+      data: { 
+        resourceId: Number(props.resourceId) 
+      },
       responseType: 'blob' 
     })
 
-    // 2. 兼容性处理：获取真正的二进制数据
-    // 这里的 res 可能是完整的 response，也可能是拦截器处理后的 data
-    const blobData = res.data || res; 
+    // 3. 兼容性处理：提取 Blob 数据
+    // 解决 Axios 拦截器可能返回不同层级数据的问题
+    const blobData = res.data ? res.data : res;
 
-    // 3. 检查是否是报错 JSON (例如积分不足)
-    // 如果返回的是文件，type 通常是 application/pdf 或 application/octet-stream
+    // 安全检查
+    if (!(blobData instanceof Blob)) {
+      throw new Error('未获取到有效的文件流');
+    }
+
+    // 4. 拦截报错 JSON (如积分不足、文件丢失)
     if (blobData.type === 'application/json') {
       const reader = new FileReader()
       reader.onload = () => {
         try {
           const result = JSON.parse(reader.result)
-          ElMessage.error(result.message || '积分不足')
+          ElMessage.error(result.message || '下载失败')
         } catch (e) {
-          ElMessage.error('下载失败，请检查积分')
+          ElMessage.error('系统繁忙，请稍后再试')
         }
       }
       reader.readAsText(blobData)
       return
     }
 
-    // 4. 执行下载
+    // 5. 模拟下载行为
     const blob = new Blob([blobData])
     const url = window.URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url
     
-    // 设置文件名
+    // 生成文件名
     const fileName = `${resource.value?.title || 'resource'}.${resource.value?.format || 'pdf'}`
     link.setAttribute('download', fileName)
     
     document.body.appendChild(link)
     link.click()
     
+    // 6. 资源释放
     document.body.removeChild(link)
     window.URL.revokeObjectURL(url)
 
     ElMessage.success('积分扣除成功，开始下载')
 
   } catch (err) {
-    console.error('下载环节捕获错误:', err)
-    // 如果 Network 是 200 但进了这里，说明是上面的 Blob 处理逻辑写错了
-    // 如果 Network 是 404/500，则是真正的服务器问题
-    ElMessage.error('处理下载文件时出错，请查看控制台')
+    if (err !== 'cancel') {
+      console.error('Download Trace:', err)
+      ElMessage.error('无法连接到服务器或文件处理出错')
+    }
   } finally {
     downloadLoading.value = false
   }
@@ -170,7 +199,6 @@ const handleDownload = async () => {
 </script>
 
 <style scoped>
-/* 样式保持原样，确保 UI 布局完美 */
 .sidebar-container { width: 100%; }
 .sidebar-card { border-radius: 12px; border: none; margin-bottom: 20px; }
 .download-card { background-color: #ffffff; }
