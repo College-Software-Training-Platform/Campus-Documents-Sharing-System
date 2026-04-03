@@ -75,7 +75,7 @@ const downloadResource = async (req, res) => {
 const uploadResource = async (req, res) => {
     let t;
     try {
-        const { title, courseName, tags, points, description } = req.body;
+        const { title, courseName, tags, points, ai_Summary } = req.body;
         const uploader_ID = req.user.userId;
 
         if (!req.file) return res.status(400).json({ code: 400, message: '请选择文件' });
@@ -94,7 +94,7 @@ const uploadResource = async (req, res) => {
             format: path.extname(req.file.originalname).substring(1).toLowerCase(),
             file_Size: req.file.size,
             required_Points: points || 0,
-            description, audit_Status: 'pending', upload_Time: new Date(), download_Count: 0
+            ai_Summary, audit_Status: 'pending', upload_Time: new Date(), download_Count: 0
         }, { transaction: t });
 
         if (tags) {

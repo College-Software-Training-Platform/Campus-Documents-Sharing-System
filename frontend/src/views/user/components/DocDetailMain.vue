@@ -28,7 +28,7 @@
     <div class="detail-description">
       <h3 class="section-title"><span class="title-indicator"></span> 摘要</h3>
       <div class="desc-content">
-        {{ resource?.ai_Summary || resource?.description || '暂无详细摘要' }}
+        {{ resource?.ai_Summary || '暂无详细摘要' }}
       </div>
       <div class="hash-tags">
         <CommonTag 

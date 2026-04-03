@@ -80,7 +80,7 @@
           </div>
         </template>
         <el-input
-          v-model="publishForm.description"
+          v-model="publishForm.ai_Summary"
           type="textarea"
           :rows="6"
           placeholder="请详细描述资源内容，帮助其他用户了解资料价值..."
@@ -142,7 +142,7 @@ const publishForm = reactive({
   title: '',
   courseName: '',
   tags: [],
-  description: '',
+  ai_Summary: '',
   points: 0,
   agreement: false
 })
@@ -178,7 +178,7 @@ const generateAISummary = async () => {
     })
 
     if (response.success) {
-      publishForm.description = response.summary
+      publishForm.ai_Summary = response.summary
       ElMessage.success('摘要已成功生成')
     }
   } catch (error) {
@@ -215,7 +215,7 @@ const handleSubmit = async () => {
   formData.append('title', publishForm.title)
   formData.append('courseName', publishForm.courseName)
   formData.append('tags', JSON.stringify(publishForm.tags))
-  formData.append('description', publishForm.description)
+  formData.append('ai_Summary', publishForm.ai_Summary)
   formData.append('points', publishForm.points)
 
   // 3. 调用后端 API
