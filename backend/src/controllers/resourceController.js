@@ -140,19 +140,47 @@ const getDiscoverTrend = async (req, res) => {
 };
 
 /**
- * ✅ 审核逻辑
+ * ✅ 获取待审核列表 (适配路由)
  */
-const getPendingResources = async () => {
-    const list = await resources.findAll({ where: { audit_Status: 'pending' } });
-    return list.map(r => r.toJSON());
+const getPendingResources = async (req, res) => {
+    try {
+        const list = await resources.findAll({ 
+            where: { audit_Status: 'pending' },
+            include: [{ model: users, as: 'uploader', attributes: ['name'] }]
+        });
+        res.json({ code: 200, data: list });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ code: 500, message: '获取审核列表失败' });
+    }
 };
 
-const approveResource = async (resourceId) => {
-    await resources.update({ audit_Status: 'approved' }, { where: { resource_ID: resourceId } });
-};
+/**
+ * ✅ 统一审核逻辑 (适配 router.put('/:id/audit'))
+ */
+const auditResource = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { status } = req.body; // 前端传 'approved' 或 'rejected'
 
-const rejectResource = async (resourceId) => {
-    await resources.update({ audit_Status: 'rejected' }, { where: { resource_ID: resourceId } });
+        if (!['approved', 'rejected'].includes(status)) {
+            return res.status(400).json({ code: 400, message: '审核状态无效' });
+        }
+
+        const [updated] = await resources.update(
+            { audit_Status: status },
+            { where: { resource_ID: id } }
+        );
+
+        if (updated) {
+            res.json({ code: 200, message: `操作成功，已将资源设置为: ${status}` });
+        } else {
+            res.status(404).json({ code: 404, message: '未找到该资源' });
+        }
+    } catch (err) {
+        console.error('审核失败:', err);
+        res.status(500).json({ code: 500, message: '审核系统故障' });
+    }
 };
 
 /**
@@ -200,7 +228,8 @@ module.exports = {
     getDiscoverTrend,
     getResourceDetail,
     getPendingResources,
-    approveResource,
-    rejectResource,
+    // approveResource,
+    // rejectResource,
+    auditResource,
     getCourses
 };
