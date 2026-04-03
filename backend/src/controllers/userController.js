@@ -182,25 +182,28 @@ exports.getUserProfile = async (req, res) => {
  */
 exports.updateProfile = async (req, res) => {
     try {
-        const { studentId, nickname, bio, major, avatarUrl } = req.body;
+        // 🚀 修正：同时接收 name 和 nickname，增强兼容性
+        const { studentId, name, nickname, bio, major, avatarUrl, avatar_Url } = req.body;
 
         if (!studentId) {
             return res.status(400).json({ code: 400, message: '缺少 studentId 参数' });
         }
 
-        // 🚀 新增：处理头像路径，确保数据库只存相对路径
-        // 如果前端传的是 http://localhost:3000/uploads/xxx，我们只取 uploads/xxx
-        let finalAvatarPath = avatarUrl;
-        if (avatarUrl && avatarUrl.includes('http://localhost:3000/')) {
-            finalAvatarPath = avatarUrl.split('http://localhost:3000/')[1];
+        // 🚀 修正：处理昵称逻辑
+        const finalName = name || nickname;
+
+        // 🚀 修正：头像路径逻辑（更简单的判断）
+        let finalAvatarPath = avatar_Url || avatarUrl;
+        if (finalAvatarPath && finalAvatarPath.includes('http://localhost:3000/')) {
+            finalAvatarPath = finalAvatarPath.split('http://localhost:3000/')[1];
         }
 
         const [updatedRows] = await models.users.update(
             { 
-                name: nickname, 
+                name: finalName, // 确保数据库字段是 name
                 bio: bio, 
                 major: major,
-                avatar_Url: finalAvatarPath // 使用处理后的路径
+                avatar_Url: finalAvatarPath 
             },
             { where: { account: studentId } }
         );
