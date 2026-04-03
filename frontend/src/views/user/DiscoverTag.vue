@@ -102,7 +102,7 @@ const hotTagLabels = computed(() => {
   if (serverTags.length) {
     return serverTags.map((t) => `#${t.tagName}`)
   }
-  return ['#NLP', '#Quantum', '#FinTech', '#Ecology', '#Ethics', '#Robotics']
+  return ['#高等数学', '#大学英语', '#线性代数', '#大学物理', '#马克思主义', '#概率论与数理统计', '#数据结构', '#离散数学', '#毛概', '#模电数电', '#计算机网络']
 })
 
 onMounted(async () => {
