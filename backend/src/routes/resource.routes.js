@@ -45,7 +45,8 @@ router.post('/upload', authMiddleware, upload.single('file'), ResourceController
 // 下载资源
 router.post('/download', authMiddleware, ResourceController.downloadResource);
 // 获取待审核列表
-router.get('/pending', authMiddleware, ResourceController.getPendingResources);
+//router.get('/pending', authMiddleware, ResourceController.getPendingResources);
+router.get('/pending', ResourceController.getPendingResources);
 // 审核资源 (通过/驳回)
 router.put('/:id/audit', authMiddleware, ResourceController.auditResource);
 // 资料删除
