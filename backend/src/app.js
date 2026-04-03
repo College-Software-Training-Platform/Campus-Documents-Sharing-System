@@ -14,6 +14,8 @@ app.use(cors())
 app.use(cors());
 app.use(express.json());
 
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+
 // --- 路由挂载区 ---
 const usersRouter = require('./routes/users.routes'); 
 app.use('/api/users', usersRouter);

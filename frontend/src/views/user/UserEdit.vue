@@ -11,19 +11,18 @@
       <el-form :model="editForm" label-width="100px" label-position="left">
         <el-form-item label="用户头像">
           <el-upload
-            class="avatar-uploader"
-            action="http://localhost:3000/api/users/upload-avatar" 
-            :show-file-list="false"
-            :on-success="handleAvatarSuccess"
-            :before-upload="beforeAvatarUpload"
-            name="avatar"
-          >
-            <img v-if="imageUrl" :src="imageUrl" class="avatar-preview" />
-            <el-icon v-else class="avatar-uploader-icon"><Plus /></el-icon>
-            <template #tip>
-              <div class="el-upload__tip">支持 JPG/PNG，不超过 2MB</div>
-            </template>
-          </el-upload>
+  class="avatar-uploader"
+  action="http://localhost:3000/api/users/upload-avatar" 
+  :show-file-list="false"
+  :on-success="handleAvatarSuccess"
+  :on-error="handleAvatarError"
+  :before-upload="beforeAvatarUpload"
+  :headers="uploadHeaders" 
+  name="avatar"
+>
+  <img v-if="imageUrl" :src="imageUrl" class="avatar-preview" />
+  <el-icon v-else class="avatar-uploader-icon"><Plus /></el-icon>
+</el-upload>
         </el-form-item>
 
         <el-form-item label="用户昵称">
@@ -58,7 +57,7 @@
 </template>
 
 <script setup>
-import { reactive, ref, onMounted } from 'vue'
+import { reactive, ref, onMounted, computed } from 'vue' // 引入 computed
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
@@ -69,52 +68,72 @@ const submitting = ref(false)
 const defaultAvatar = 'https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png'
 const imageUrl = ref('')
 
-/**
- * 🛠️ 关键修正：动态获取当前登录学号
- * 不再写死 '2024214283'。
- */
+// --- 🚀 新增：配置上传请求头 ---
+const uploadHeaders = computed(() => {
+  const token = localStorage.getItem('token')
+  return {
+    Authorization: token ? `Bearer ${token}` : ''
+  }
+})
+
 const currentStudentId = localStorage.getItem('studentId')
 
 const editForm = reactive({
   nickname: '',
   bio: '',
   major: '',
-  avatarUrl: '', // 对应后端 updateProfile 接收的参数名
+  avatarUrl: '', 
   studentId: currentStudentId 
 })
 
-// --- 步骤 1: 进入页面时自动填充已有资料 ---
+// --- 步骤 1: 加载数据 (保持不变) ---
 const fetchCurrentData = async () => {
   if (!currentStudentId) {
     ElMessage.error('未检测到登录学号，请重新登录')
     return
   }
-
   try {
-    // 这里的接口路径需与后端 router 定义一致
     const res = await axios.get('http://localhost:3000/api/users/profile', {
       params: { studentId: currentStudentId }
     })
-
+    
     if (res.data.code === 200) {
       const data = res.data.data
-      // ✅ 字段映射：后端返回的是 name，前端对应 nickname
       editForm.nickname = data.name
       editForm.bio = data.bio || ''
       editForm.major = data.major || ''
-      editForm.avatarUrl = data.avatar_Url // 后端数据库字段是 avatar_Url
-      imageUrl.value = data.avatar_Url || defaultAvatar
-      console.log('当前资料加载成功:', data)
+      
+      // 🚀 核心修改开始：更加健壮的图片处理逻辑
+      const rawPath = data.avatar_Url
+      if (rawPath) {
+        // 1. 保存原始路径到表单，提交时原样回传给后端
+        editForm.avatarUrl = rawPath 
+        
+        // 2. 处理预览显示的 URL
+        if (rawPath.startsWith('http')) {
+          // 如果数据库里已经是完整路径了，直接用
+          imageUrl.value = rawPath
+        } else {
+          // 如果是相对路径（如 uploads/abc.png），去掉开头的斜杠防止双斜杠，再拼接
+          const cleanPath = rawPath.startsWith('/') ? rawPath.substring(1) : rawPath
+          imageUrl.value = `http://localhost:3000/${cleanPath}`
+        }
+      } else {
+        imageUrl.value = defaultAvatar
+      }
+      // 🚀 核心修改结束
+      
+      console.log('当前预览图地址:', imageUrl.value) // 💡 调试用：在控制台看看这个地址对不对
     }
   } catch (error) {
-    console.error('获取资料失败:', error)
-    ElMessage.error('无法同步个人资料，请检查后端运行状态')
+    console.error('获取资料详细错误:', error)
+    ElMessage.error('获取资料失败')
   }
 }
 
 onMounted(fetchCurrentData)
 
-// --- 步骤 2: 头像上传校验与预览 ---
+// --- 步骤 2: 头像上传处理 ---
 const beforeAvatarUpload = (rawFile) => {
   const isTypeValid = ['image/jpeg', 'image/png'].includes(rawFile.type)
   const isLt2M = rawFile.size / 1024 / 1024 < 2
@@ -124,39 +143,53 @@ const beforeAvatarUpload = (rawFile) => {
 }
 
 const handleAvatarSuccess = (response) => {
-  // 假设后端上传接口成功后返回 { code: 200, url: '...' }
-  if (response.code === 200 || response.url) {
+  // response 是后端 res.json 返回的内容
+  if (response.code === 200) {
+    // 1. 更新预览图 (后端返回的可能是完整 URL，也可能是路径)
     imageUrl.value = response.url 
-    editForm.avatarUrl = response.url 
-    ElMessage.success('头像预览已更新，点击保存生效')
+    // 2. 核心：提取路径存入 editForm，以便 handleSave 时提交到数据库
+    // 如果后端返回的是 http://.../uploads/xxx.jpg，我们只存 uploads/xxx.jpg
+    const relativePath = response.url.split('http://localhost:3000/')[1] || response.url
+    editForm.avatarUrl = relativePath 
+    
+    ElMessage.success('头像上传成功，保存后生效')
+  } else {
+    ElMessage.error(response.message || '上传失败')
   }
 }
 
-// --- 步骤 3: 提交保存 ---
+const handleAvatarError = (err) => {
+  console.error('上传失败详情:', err)
+  ElMessage.error('头像上传失败，请检查网络或登录状态')
+}
+
+// --- 步骤 3: 提交保存 (完善逻辑) ---
 const handleSave = async () => {
   if (!editForm.nickname) return ElMessage.warning('昵称不能为空')
   
   submitting.value = true
   try {
-    // 🚀 这里传的字段名必须和后端 updateProfile 解构的参数名完全一致
     const res = await axios.post('http://localhost:3000/api/users/update', {
-      studentId: editForm.studentId, // 用于后端 where 匹配
-      nickname: editForm.nickname,   // 后端会将其赋值给数据库的 name
+      studentId: editForm.studentId, 
+      name: editForm.nickname,    // 🚀 改为 name，通常后端数据库字段是这个
       bio: editForm.bio,
       major: editForm.major,
-      avatarUrl: editForm.avatarUrl  // 后端会将其赋值给数据库的 avatar_Url
+      avatar_Url: editForm.avatarUrl // 🚀 改为 avatar_Url，与数据库保持一致
     })
 
     if (res.data.code === 200) {
-      ElMessage.success('个人资料已成功同步到数据库')
-      // 跳转回个人详情页
+      ElMessage.success('资料更新成功！')
+      
+      // 🌟 同步更新 localStorage 里的用户信息（可选，推荐）
+      const user = JSON.parse(localStorage.getItem('user') || '{}')
+      user.name = editForm.nickname
+      user.avatar_Url = editForm.avatarUrl
+      localStorage.setItem('user', JSON.stringify(user))
+
       router.push('/user/Profile')
-    } else {
-      ElMessage.error(res.data.message || '更新失败')
     }
   } catch (error) {
-    console.error('保存报错:', error)
-    ElMessage.error('更新系统繁忙，请稍后再试')
+    ElMessage.error('保存失败')
   } finally {
     submitting.value = false
   }

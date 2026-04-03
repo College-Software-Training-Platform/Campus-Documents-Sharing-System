@@ -3,6 +3,8 @@
  * @description 用户模块业务逻辑控制器 - 生产级统一版本
  * @module 控制器层
  */
+const path = require('path');
+const fs = require('fs'); // 顺便检查一下 fs 是否也引入了，因为你用到了 fs.existsSync 和 unlinkSync
 
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
@@ -180,33 +182,37 @@ exports.getUserProfile = async (req, res) => {
  */
 exports.updateProfile = async (req, res) => {
     try {
-        // 从请求体中解构数据
         const { studentId, nickname, bio, major, avatarUrl } = req.body;
 
         if (!studentId) {
             return res.status(400).json({ code: 400, message: '缺少 studentId 参数' });
         }
 
-        // 执行数据库更新
-        // 🌟 映射关系：name <- nickname, avatar_Url <- avatarUrl
+        // 🚀 新增：处理头像路径，确保数据库只存相对路径
+        // 如果前端传的是 http://localhost:3000/uploads/xxx，我们只取 uploads/xxx
+        let finalAvatarPath = avatarUrl;
+        if (avatarUrl && avatarUrl.includes('http://localhost:3000/')) {
+            finalAvatarPath = avatarUrl.split('http://localhost:3000/')[1];
+        }
+
         const [updatedRows] = await models.users.update(
             { 
                 name: nickname, 
                 bio: bio, 
                 major: major,
-                avatar_Url: avatarUrl  // 确保这里对应你数据库的真实字段名
+                avatar_Url: finalAvatarPath // 使用处理后的路径
             },
             { where: { account: studentId } }
         );
 
         if (updatedRows === 0) {
-            return res.status(404).json({ code: 404, message: '未找到该学号的用户' });
+            return res.status(404).json({ code: 404, message: '更新失败，未找到该学号' });
         }
 
-        res.status(200).json({ code: 200, message: '资料已更新' });
+        res.status(200).json({ code: 200, message: '资料已成功同步到数据库' });
     } catch (error) {
         console.error("更新资料失败:", error);
-        res.status(500).json({ code: 500, message: '更新失败: ' + error.message });
+        res.status(500).json({ code: 500, message: '服务器写入错误' });
     }
 };
 
@@ -416,3 +422,54 @@ exports.banUser = async (req, res) => {
     }
 };
 
+/**
+ * ✅ 核心逻辑：更新用户头像
+ */
+exports.updateAvatar = async (req, res) => {
+    try {
+        // 1. 检查文件是否存在 (Multer 会把文件放在 req.file)
+        if (!req.file) {
+            return res.status(400).json({ code: 400, message: '未接收到图片文件' });
+        }
+
+        // 🚀 注意：如果你在 app.js 中没用 authMiddleware，req.user 可能为空
+        // 如果报错 "Cannot read property 'userId' of undefined"，请检查路由是否加了鉴权
+        const userId = req.user ? req.user.userId : null; 
+
+        // 2. 生成新头像的相对路径
+        const filename = path.basename(req.file.path);
+        const relativePath = 'uploads/' + filename;
+        
+        // 🚀 核心：返回给前端一个可以直接访问的完整 URL，用于即时预览
+        const fullUrl = `http://localhost:3000/${relativePath}`;
+
+        // 3. 如果有用户信息，同步更新数据库
+        if (userId) {
+            const user = await models.users.findByPk(userId);
+            if (user) {
+                // 删除旧文件逻辑
+                if (user.avatar_Url && user.avatar_Url.startsWith('uploads/')) {
+                    const oldPath = path.resolve(__dirname, '../../', user.avatar_Url);
+                    if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+                }
+                // 更新数据库路径
+                await models.users.update(
+                    { avatar_Url: relativePath },
+                    { where: { user_ID: userId } }
+                );
+            }
+        }
+
+        // 4. 返回成功响应
+        res.json({ 
+            code: 200, 
+            message: '头像上传成功', 
+            url: fullUrl,           // 前端 handleAvatarSuccess 需要这个字段来显示图片
+            path: relativePath      // 备用：相对路径
+        });
+
+    } catch (err) {
+        console.error('头像上传逻辑崩溃:', err);
+        res.status(500).json({ code: 500, message: '服务器内部错误' });
+    }
+};

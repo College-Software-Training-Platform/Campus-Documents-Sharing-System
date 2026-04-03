@@ -18,11 +18,13 @@ if (!fs.existsSync(uploadDir)) {
 
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
-        cb(null, uploadDir); 
+        cb(null, 'uploads/'); // 确保根目录有 uploads 文件夹
     },
     filename: (req, file, cb) => {
+        // 🚀 核心：确保文件名包含时间戳和原始后缀名
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        cb(null, uniqueSuffix + path.extname(file.originalname));
+        // path.extname(file.originalname) 会获取 .jpg 或 .png
+        cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
     }
 });
 
