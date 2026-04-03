@@ -297,6 +297,34 @@ const rejectResource = async (resourceId) => {
     );
 };
 
+/**
+ * ✅ 核心逻辑：更新资源信息 (目前仅允许修改标题)
+ */
+const updateResource = async (req, res) => {
+    try {
+        const { id } = req.params; // 获取路由中的 resource_ID
+        const { title } = req.body;  // 获取前端传来的新标题
+
+        if (!title || !title.trim()) {
+            return res.status(400).json({ code: 400, message: '资源名称不能为空' });
+        }
+
+        // 执行更新：注意字段名 resource_ID
+        const [updatedRows] = await models.resources.update(
+            { title: title.trim() }, 
+            { where: { resource_ID: id } }
+        );
+
+        if (updatedRows === 1) {
+            res.json({ code: 200, message: '更新成功' });
+        } else {
+            res.status(404).json({ code: 404, message: '资源不存在或未做修改' });
+        }
+    } catch (err) {
+        console.error('更新资源失败:', err);
+        res.status(500).json({ code: 500, message: '服务器内部错误' });
+    }
+};
 
 module.exports = {
     downloadResource,
@@ -306,5 +334,6 @@ module.exports = {
     getPendingResources,
     auditResource,
     getCourses,
-    deleteResource
+    deleteResource,
+    updateResource
 };

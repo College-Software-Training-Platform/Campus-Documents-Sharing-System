@@ -167,7 +167,7 @@ const submitEdit = async () => {
   
   editLoading.value = true
   try {
-    const res = await request.put(`/users/resources/${editForm.resource_ID}`, {
+    const res = await request.put(`/resources/${editForm.resource_ID}`, {
       title: editForm.title
     })
     if (res.code === 200) {

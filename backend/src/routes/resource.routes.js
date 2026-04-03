@@ -51,6 +51,8 @@ router.get('/pending', ResourceController.getPendingResources);
 router.put('/:id/audit', authMiddleware, ResourceController.auditResource);
 // 资料删除
 router.delete('/:id', authMiddleware, ResourceController.deleteResource);
+// 资料更新
+router.put('/:id', authMiddleware, ResourceController.updateResource);
 
 // 3.3 详情查询 (必须放在最后，防止 :id 拦截其他静态路径)
 router.get('/:id', ResourceController.getResourceDetail);
