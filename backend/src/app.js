@@ -8,6 +8,8 @@ const cors = require('cors');
 const app = express();
 const PORT = 3000;
 
+app.use(cors())
+
 // 中间件配置
 app.use(cors());
 app.use(express.json());

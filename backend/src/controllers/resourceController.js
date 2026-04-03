@@ -182,44 +182,24 @@ const getDiscoverTrend = async (req, res) => {
  */
 const getPendingResources = async (req, res) => {
     try {
-        const list = await resources.findAll({ 
-            where: { audit_Status: 'pending' },
-            include: [{ model: users, as: 'uploader', attributes: ['name'] }]
+        const list = await resources.findAll({
+            where: { audit_Status: 'pending' }
         });
-        res.json({ code: 200, data: list });
+
+        res.json({
+            code: 200,
+            data: list
+        });
+
     } catch (err) {
         console.error(err);
-        res.status(500).json({ code: 500, message: '获取审核列表失败' });
+        res.status(500).json({
+            code: 500,
+            message: '获取待审核资源失败'
+        });
     }
 };
 
-/**
- * ✅ 统一审核逻辑
- */
-const auditResource = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { status } = req.body; 
-
-        if (!['approved', 'rejected'].includes(status)) {
-            return res.status(400).json({ code: 400, message: '审核状态无效' });
-        }
-
-        const [updated] = await resources.update(
-            { audit_Status: status },
-            { where: { resource_ID: id } }
-        );
-
-        if (updated) {
-            res.json({ code: 200, message: `操作成功，已将资源设置为: ${status}` });
-        } else {
-            res.status(404).json({ code: 404, message: '未找到该资源' });
-        }
-    } catch (err) {
-        console.error('审核失败:', err);
-        res.status(500).json({ code: 500, message: '审核系统故障' });
-    }
-};
 
 /**
  * ✅ 核心逻辑：获取资源详情
@@ -262,6 +242,42 @@ const getCourses = async (req, res) => {
         res.status(500).json({ code: 500, message: '获取课程失败' });
     }
 };
+
+const auditResource = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { action } = req.body; // approve / reject
+
+        if (action === 'approve') {
+            await approveResource(id);
+            return res.json({ code: 200, message: '操作成功' });
+        } else if (action === 'reject') {
+            await rejectResource(id);
+            return res.json({ code: 200, message: '已驳回' });
+        } else {
+            return res.status(400).json({ code: 400, message: '无效操作' });
+        }
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ code: 500, message: '审核失败' });
+    }
+};
+
+
+const approveResource = async (resourceId) => {
+    await resources.update(
+        { audit_Status: 'approved' },
+        { where: { resource_ID: resourceId } }
+    );
+};
+
+const rejectResource = async (resourceId) => {
+    await resources.update(
+        { audit_Status: 'rejected' },
+        { where: { resource_ID: resourceId } }
+    );
+};
+
 
 module.exports = {
     downloadResource,

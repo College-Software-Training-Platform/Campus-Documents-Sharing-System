@@ -69,22 +69,27 @@ const total = ref(0)
 const keyword = ref('')
 const loading = ref(false)
 
-// ✅ 获取用户列表（适配后端的 { code: 200, data: [] } 格式）
+// 获取用户列表（适配后端的 { code: 200, data: [] } 格式）
 const fetchUsers = async () => {
   loading.value = true
   try {
-    // 注意：如果你的 app.js 挂载的是 /api/user，请把这里的 s 去掉
-    const res = await axios.get('http://localhost:3000/api/users')
+    const res = await axios.get(
+      'http://localhost:3000/api/users',
+      {
+        headers: {
+          Authorization: 'Bearer ' + localStorage.getItem('token')
+        }
+      }
+    )
 
-    // 核心逻辑：从 res.data.data 中提取数组
     if (res.data.code === 200 && Array.isArray(res.data.data)) {
       const rawData = res.data.data
       
       userList.value = rawData.map(item => ({
-        id: item.user_ID,       // 对应后端数据库 user_ID
-        username: item.name || '未设置', // 对应后端数据库 name
-        account: item.account,  // 对应后端数据库 account
-        email: item.contact,    // 对应后端数据库 contact
+        id: item.user_ID,
+        username: item.name || '未设置',
+        account: item.account,
+        email: item.contact,
         role: item.role
       }))
 
@@ -94,13 +99,13 @@ const fetchUsers = async () => {
     }
   } catch (error) {
     console.error('获取用户失败:', error)
-    ElMessage.error('无法连接到服务器，请检查后端是否启动')
+    ElMessage.error('未登录或权限不足')
   } finally {
     loading.value = false
   }
 }
 
-// 🔍 搜索（基于当前列表过滤）
+// 搜索（基于当前列表过滤）
 const handleSearch = () => {
   if (!keyword.value) {
     fetchUsers()
@@ -111,31 +116,56 @@ const handleSearch = () => {
   )
 }
 
-// 🗑 删除用户
+const token = localStorage.getItem('token')
+
+// 删除用户
 const handleDelete = async (row) => {
   try {
-    await ElMessageBox.confirm(`确定要删除用户 ${row.username} 吗？`, '提示', { type: 'warning' })
-    // 注意路径：这里建议确认一下后端的删除接口路径
-    await axios.delete(`http://localhost:3000/api/users/${row.id}`)
+    await ElMessageBox.confirm(
+      `确定要删除用户 ${row.username} 吗？`,
+      '提示',
+      { type: 'warning' }
+    )
+
+    await axios.delete(
+      `http://localhost:3000/api/users/${row.id}`,
+      {
+        headers: {
+          Authorization: 'Bearer ' + token
+        }
+      }
+    )
+
     ElMessage.success('删除成功')
-    fetchUsers() 
+    fetchUsers()
   } catch (error) {
-    if (error !== 'cancel') console.error('删除失败:', error)
+    console.error('删除失败:', error)
+    ElMessage.error('删除失败（可能未登录或权限不足）')
   }
 }
 
-// 🚫 封禁用户
+// 封禁用户
 const handleBan = async (row) => {
   try {
-    await axios.put(`http://localhost:3000/api/users/${row.id}/ban`)
-    ElMessage.success('操作成功')
+    await axios.put(
+      `http://localhost:3000/api/users/${row.id}/ban`,
+      {},
+      {
+        headers: {
+          Authorization: 'Bearer ' + token
+        }
+      }
+    )
+
+    ElMessage.success('封禁成功')
     fetchUsers()
   } catch (error) {
     console.error('封禁失败:', error)
+    ElMessage.error('封禁失败（可能未登录或权限不足）')
   }
 }
 
-// 📄 分页处理
+//  分页处理
 const handlePageChange = (val) => {
   console.log(`当前页: ${val}`)
   fetchUsers()

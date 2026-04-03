@@ -379,17 +379,18 @@ exports.deleteUser = async (req, res) => {
   try {
     const id = req.params.id;
 
-    const result = await User.destroy({
-      where: { id }
+    const result = await users.destroy({
+      where: { user_ID: id }
     });
 
     if (result === 0) {
-      return res.status(404).json({ message: '用户不存在' });
+      return res.status(404).json({ code: 404, message: '用户不存在' });
     }
 
-    res.json({ message: '删除成功' });
+    res.json({ code: 200, message: '删除成功' });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('删除用户失败:', err);
+    res.status(500).json({ code: 500, message: '删除失败: ' + err.message });
   }
 };
 
