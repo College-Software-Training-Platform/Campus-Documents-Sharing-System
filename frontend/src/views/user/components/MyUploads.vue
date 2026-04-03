@@ -31,13 +31,28 @@
         </template>
       </el-table-column>
     </el-table>
+
+    <el-dialog v-model="editDialogVisible" title="修改资源信息" width="450px">
+      <el-form :model="editForm" label-width="80px">
+        <el-form-item label="资源名称">
+          <el-input v-model="editForm.title" />
+        </el-form-item>
+        <el-form-item label="资源格式">
+          <el-input v-model="editForm.format" disabled />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="editDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="editLoading" @click="submitEdit">保存修改</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, watch, reactive } from 'vue'
 import request from '@/utils/request'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 
 const props = defineProps({
   userId: [Number, String]
@@ -46,13 +61,22 @@ const props = defineProps({
 const list = ref([])
 const loading = ref(false)
 
+// 编辑相关的响应式数据
+const editDialogVisible = ref(false)
+const editLoading = ref(false)
+const editForm = reactive({
+  resource_ID: '',
+  title: '',
+  format: ''
+})
+
 const formatDate = (dateStr) => {
   if (!dateStr) return '-'
   const date = new Date(dateStr)
   return !isNaN(date.getTime()) ? date.toLocaleString() : dateStr
 }
 
-// 获取列表数据
+// 1. 获取列表数据
 const fetchData = async () => {
   if (!props.userId) return
   
@@ -61,7 +85,6 @@ const fetchData = async () => {
     const res = await request.get('/users/resources', {
       params: { userId: props.userId }
     })
-    
     if (res.code === 200) {
       list.value = Array.isArray(res.data) ? res.data : []
     }
@@ -73,9 +96,7 @@ const fetchData = async () => {
   }
 }
 
-/**
- * ✅ 核心功能：处理积分下载
- */
+// 2. 核心功能：处理积分下载
 const handleDownload = async (row) => {
   if (!props.userId) {
     ElMessage.warning('用户信息未加载，请稍候')
@@ -83,53 +104,99 @@ const handleDownload = async (row) => {
   }
 
   try {
-    // 1. 调用后端下载动作接口
-    // 注意：必须设置 responseType 为 'blob' 才能接收文件流
     const response = await request.post('/users/download-action', {
       resourceId: row.resource_ID
     }, { 
       responseType: 'blob' 
     })
 
-    // 2. 创建 Blob 对象并生成下载链接
     const blob = new Blob([response.data])
     const url = window.URL.createObjectURL(blob)
-    
-    // 3. 创建虚拟 A 标签触发浏览器下载
     const link = document.createElement('a')
     link.href = url
-    // 拼接文件名：标题.格式
     link.setAttribute('download', `${row.title}.${row.format || 'bin'}`)
     document.body.appendChild(link)
     link.click()
-    
-    // 4. 下载后移除临时元素并释放内存
     document.body.removeChild(link)
     window.URL.revokeObjectURL(url)
 
     ElMessage.success('积分扣除成功，文件开始下载')
-    
-    // 5. 关键：重新拉取列表，更新页面显示的“下载次数”
     fetchData()
-
   } catch (error) {
-    console.error('下载失败详情:', error)
-    
-    // 特殊处理：如果是 Blob 类型报错，需要读取其内部的 JSON 错误信息
-    if (error.response && error.response.data instanceof Blob) {
-      const reader = new FileReader()
-      reader.onload = () => {
-        try {
-          const result = JSON.parse(reader.result)
-          ElMessage.error(result.message || '下载失败')
-        } catch (e) {
-          ElMessage.error('积分不足或服务器资源丢失')
-        }
-      }
-      reader.readAsText(error.response.data)
-    } else {
-      ElMessage.error('网络错误或服务器无响应')
+    handleBlobError(error)
+  }
+}
+
+// 3. 核心功能：删除资料
+const handleDelete = (row) => {
+  //弹窗提示是否确认删除
+  ElMessageBox.confirm(
+    `确定要永久删除资源《${row.title}》吗？`,
+    '高危操作提示',
+    {
+      confirmButtonText: '确定删除',
+      cancelButtonText: '取消',
+      type: 'warning',
     }
+  ).then(async () => {
+    try {
+      const res = await request.delete(`/resources/${row.resource_ID}`)
+      if (res.code === 200) {
+        ElMessage.success('资源已成功删除')
+        fetchData() // 刷新列表
+      }
+    } catch (error) {
+      ElMessage.error('删除失败，请稍后重试')
+    }
+  }).catch(() => {
+    // 点击取消不执行任何操作
+  })
+}
+
+// 4. 编辑功能：打开弹窗并回显
+const handleEdit = (row) => {
+  editForm.resource_ID = row.resource_ID
+  editForm.title = row.title
+  editForm.format = row.format
+  editDialogVisible.value = true
+}
+
+// 5. 编辑功能：提交修改
+const submitEdit = async () => {
+  if (!editForm.title.trim()) return ElMessage.warning('名称不能为空')
+  
+  editLoading.value = true
+  try {
+    const res = await request.put(`/users/resources/${editForm.resource_ID}`, {
+      title: editForm.title
+    })
+    if (res.code === 200) {
+      ElMessage.success('更新成功')
+      editDialogVisible.value = false
+      fetchData()
+    }
+  } catch (error) {
+    ElMessage.error('更新失败')
+  } finally {
+    editLoading.value = false
+  }
+}
+
+// Blob 错误解析辅助函数
+const handleBlobError = (error) => {
+  if (error.response && error.response.data instanceof Blob) {
+    const reader = new FileReader()
+    reader.onload = () => {
+      try {
+        const result = JSON.parse(reader.result)
+        ElMessage.error(result.message || '操作失败')
+      } catch (e) {
+        ElMessage.error('服务器响应异常')
+      }
+    }
+    reader.readAsText(error.response.data)
+  } else {
+    ElMessage.error('网络错误或权限不足')
   }
 }
 
@@ -137,12 +204,14 @@ watch(() => props.userId, (newVal) => {
   if (newVal) fetchData()
 }, { immediate: true })
 
-const handleDelete = (row) => { ElMessage.warning('删除功能开发中...') }
-const handleEdit = (row) => { ElMessage.info('编辑功能开发中...') }
 </script>
 
 <style scoped>
 .resource-tab-content {
   padding: 10px 0;
+}
+/* 让表格操作列的按钮间距更自然 */
+.el-button + .el-button {
+  margin-left: 12px;
 }
 </style>

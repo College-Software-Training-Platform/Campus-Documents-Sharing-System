@@ -12,7 +12,7 @@
         <el-form-item label="用户头像">
           <el-upload
             class="avatar-uploader"
-            action="/api/user/upload-avatar" 
+            action="http://localhost:3000/api/users/upload-avatar" 
             :show-file-list="false"
             :on-success="handleAvatarSuccess"
             :before-upload="beforeAvatarUpload"
@@ -41,9 +41,10 @@
 
         <el-form-item label="所属专业">
           <el-select v-model="editForm.major" placeholder="请选择专业" style="width: 100%">
-            <el-option label="计算机科学与技术" value="CS" />
-            <el-option label="软件工程" value="SE" />
-            <el-option label="通信工程" value="CE" />
+            <el-option label="计算机科学与技术" value="计算机科学与技术" />
+            <el-option label="软件工程" value="软件工程" />
+            <el-option label="通信工程" value="通信工程" />
+            <el-option label="电子信息" value="电子信息" />
           </el-select>
         </el-form-item>
 
@@ -68,49 +69,52 @@ const submitting = ref(false)
 const defaultAvatar = 'https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png'
 const imageUrl = ref('')
 
-// 固定测试学号（后期可改为从 localStorage 获取）
-const targetStudentId = '2024214283'
+/**
+ * 🛠️ 关键修正：动态获取当前登录学号
+ * 不再写死 '2024214283'。
+ */
+const currentStudentId = localStorage.getItem('studentId')
 
 const editForm = reactive({
   nickname: '',
   bio: '',
   major: '',
-  avatarUrl: '',
-  studentId: targetStudentId // 必须传给后端
+  avatarUrl: '', // 对应后端 updateProfile 接收的参数名
+  studentId: currentStudentId 
 })
 
-// --- 1. 进页面先获取当前资料，填充表单 ---
+// --- 步骤 1: 进入页面时自动填充已有资料 ---
 const fetchCurrentData = async () => {
+  if (!currentStudentId) {
+    ElMessage.error('未检测到登录学号，请重新登录')
+    return
+  }
+
   try {
-    // 打印日志方便你在浏览器控制台 F12 查看
-    console.log('正在请求资料，目标学号:', targetStudentId);
-    
+    // 这里的接口路径需与后端 router 定义一致
     const res = await axios.get('http://localhost:3000/api/users/profile', {
-      params: { studentId: targetStudentId }
+      params: { studentId: currentStudentId }
     })
 
     if (res.data.code === 200) {
       const data = res.data.data
-      // 将后端数据填充到响应式表单中
-      editForm.nickname = data.name    // 后端 users 表字段是 name
+      // ✅ 字段映射：后端返回的是 name，前端对应 nickname
+      editForm.nickname = data.name
       editForm.bio = data.bio || ''
       editForm.major = data.major || ''
-      editForm.avatarUrl = data.avatar_Url
+      editForm.avatarUrl = data.avatar_Url // 后端数据库字段是 avatar_Url
       imageUrl.value = data.avatar_Url || defaultAvatar
-      console.log('资料加载成功:', data);
-    } else {
-      ElMessage.error(res.data.message || '获取资料失败');
+      console.log('当前资料加载成功:', data)
     }
   } catch (error) {
-    // 🌟 这里会告诉你具体是 404 (路径不对) 还是 500 (后端挂了)
-    console.error('API请求详情:', error.response || error);
-    ElMessage.error('服务器连接异常，请检查后端服务是否启动');
+    console.error('获取资料失败:', error)
+    ElMessage.error('无法同步个人资料，请检查后端运行状态')
   }
 }
 
 onMounted(fetchCurrentData)
 
-// --- 2. 上传头像逻辑 ---
+// --- 步骤 2: 头像上传校验与预览 ---
 const beforeAvatarUpload = (rawFile) => {
   const isTypeValid = ['image/jpeg', 'image/png'].includes(rawFile.type)
   const isLt2M = rawFile.size / 1024 / 1024 < 2
@@ -120,37 +124,52 @@ const beforeAvatarUpload = (rawFile) => {
 }
 
 const handleAvatarSuccess = (response) => {
-  // 假设后端上传接口返回 { code: 200, url: 'http://...' }
-  imageUrl.value = response.url 
-  editForm.avatarUrl = response.url 
-  ElMessage.success('头像上传成功')
+  // 假设后端上传接口成功后返回 { code: 200, url: '...' }
+  if (response.code === 200 || response.url) {
+    imageUrl.value = response.url 
+    editForm.avatarUrl = response.url 
+    ElMessage.success('头像预览已更新，点击保存生效')
+  }
 }
 
-// --- 3. 提交修改到后端 ---
+// --- 步骤 3: 提交保存 ---
 const handleSave = async () => {
   if (!editForm.nickname) return ElMessage.warning('昵称不能为空')
   
   submitting.value = true
   try {
-    // 对应你后端 userController.js 中的 updateProfile 函数
+    // 🚀 这里传的字段名必须和后端 updateProfile 解构的参数名完全一致
     const res = await axios.post('http://localhost:3000/api/users/update', {
-      studentId: editForm.studentId,
-      nickname: editForm.nickname,
+      studentId: editForm.studentId, // 用于后端 where 匹配
+      nickname: editForm.nickname,   // 后端会将其赋值给数据库的 name
       bio: editForm.bio,
-      major: editForm.major
+      major: editForm.major,
+      avatarUrl: editForm.avatarUrl  // 后端会将其赋值给数据库的 avatar_Url
     })
 
     if (res.data.code === 200) {
-      ElMessage.success('个人资料已更新')
-      router.push('/user/Profile') // 跳回详情页，触发详情页重新加载
+      ElMessage.success('个人资料已成功同步到数据库')
+      // 跳转回个人详情页
+      router.push('/user/Profile')
     } else {
       ElMessage.error(res.data.message || '更新失败')
     }
   } catch (error) {
-    console.error('更新报错:', error)
-    ElMessage.error('系统繁忙，请稍后再试')
+    console.error('保存报错:', error)
+    ElMessage.error('更新系统繁忙，请稍后再试')
   } finally {
     submitting.value = false
   }
 }
 </script>
+
+<style scoped>
+.edit-container { padding: 20px; display: flex; justify-content: center; background-color: #f5f7fa; min-height: 100vh; }
+.edit-card { width: 100%; max-width: 550px; }
+.card-header { display: flex; justify-content: space-between; align-items: center; }
+.title { font-weight: bold; font-size: 18px; }
+.avatar-uploader { border: 1px dashed #d9d9d9; border-radius: 6px; cursor: pointer; width: 100px; height: 100px; display: flex; justify-content: center; align-items: center; overflow: hidden; margin-bottom: 10px; }
+.avatar-uploader:hover { border-color: #409eff; }
+.avatar-preview { width: 100px; height: 100px; object-fit: cover; }
+.avatar-uploader-icon { font-size: 28px; color: #8c939d; }
+</style>

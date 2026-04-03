@@ -263,6 +263,25 @@ const getCourses = async (req, res) => {
     }
 };
 
+//简单删除接口
+const deleteResource = async (req, res) => {
+    try {
+        const { id } = req.params; 
+        const deleted = await models.resources.destroy({ 
+            where: { resource_ID: id } 
+        });
+
+        if (deleted) {
+            res.status(200).json({ code: 200, message: '删除成功' });
+        } else {
+            res.status(404).json({ code: 404, message: '资源不存在，删除失败' });
+        }
+    } catch (error) {
+        console.error('删除失败:', error);
+        res.status(500).json({ code: 500, message: '删除失败' });
+    }
+};
+
 module.exports = {
     downloadResource,
     uploadResource,
@@ -270,5 +289,6 @@ module.exports = {
     getResourceDetail,
     getPendingResources,
     auditResource,
-    getCourses
+    getCourses,
+    deleteResource
 };

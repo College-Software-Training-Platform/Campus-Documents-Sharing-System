@@ -48,6 +48,8 @@ router.post('/download', authMiddleware, ResourceController.downloadResource);
 router.get('/pending', authMiddleware, ResourceController.getPendingResources);
 // 审核资源 (通过/驳回)
 router.put('/:id/audit', authMiddleware, ResourceController.auditResource);
+// 资料删除
+router.delete('/:id', authMiddleware, ResourceController.deleteResource);
 
 // 3.3 详情查询 (必须放在最后，防止 :id 拦截其他静态路径)
 router.get('/:id', ResourceController.getResourceDetail);
